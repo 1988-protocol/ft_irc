@@ -15,7 +15,7 @@ make
 
 - C++98
 - 컴파일 플래그: `-Wall -Wextra -Werror`
-- I/O 멀티플렉싱: `poll()` 또는 `epoll`
+- I/O 멀티플렉싱: `poll()` 또는 `epoll()`
 
 ## Team & Ownership
 
