@@ -117,7 +117,7 @@ feature/<담당>-<기능>
 fix/<담당>-<버그요약>
 ```
 
-- `<담당>`: `network` | `parser` | `channel`
+- `<담당>`: `network` | `parser` | `channel` | `common` | `docs`
 - `<기능>` / `<버그요약>`: kebab-case, 동사보다는 대상 중심으로 짧게
 
 예시:
@@ -142,7 +142,7 @@ fix/<담당>-<버그요약>
 <type>(<담당>): <description>
 ```
 
-- `<담당>`: `network` | `parser` | `channel` | `common`
+- `<담당>`: `network` | `parser` | `channel` | `common` | `docs` | `chore`
 - `<description>`: 무엇을 했는지 간결하게, 현재형 동사로 시작 (예: "추가", "수정", "제거")
 
 | type | 의미 | 예시 |
