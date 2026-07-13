@@ -15,7 +15,7 @@ make
 
 - C++98
 - 컴파일 플래그: `-Wall -Wextra -Werror`
-- I/O 멀티플렉싱: `poll()` 또는 `epoll`
+- I/O 멀티플렉싱: `poll()` 또는 `epoll()`
 
 ## Team & Ownership
 
@@ -110,7 +110,60 @@ srcs/  (include/ 와 미러링, 단 .cpp가 불필요한 헤더 전용 파일은
 
 ## Branch Convention
 
-<!-- 팀 합의 후 채우기: 예) feature/<owner>-<기능>, PR 필수 여부 등 -->
+담당 영역 기준으로 브랜치명을 정합니다.
+
+```
+feature/<담당>-<기능>
+fix/<담당>-<버그요약>
+```
+
+- `<담당>`: `network` | `parser` | `channel` | `common` | `docs`
+- `<기능>` / `<버그요약>`: kebab-case, 동사보다는 대상 중심으로 짧게
+
+예시:
+- `feature/network-poll-loop`
+- `feature/parser-message-parsing`
+- `feature/channel-join-part`
+- `fix/network-fd-leak-on-disconnect`
+
+규칙:
+- `main`은 항상 빌드/동작 가능한 상태로 유지 (직접 push 금지)
+- 모든 변경은 `feature/*` 또는 `fix/*` 브랜치에서 작업 후 **PR을 통해서만** `main`에 병합
+- PR은 **본인 외 최소 1인 리뷰/승인** 후 머지 (담당 영역이 겹치는 부분은 관련자 전원 리뷰)
+- 머지 방식은 `Squash and merge`로 통일 (커밋 히스토리 정리, 이력 추적 용이)
+- 머지된 브랜치는 삭제 (원격/로컬 모두 정리)
+- `common/` 변경이 포함된 PR은 3인 전원 리뷰 필수
+
+## Commit Convention
+
+<!-- 팀 합의 후 확정. 아래는 권장안 -->
+
+```
+<type>(<담당>): <description>
+```
+
+- `<담당>`: `network` | `parser` | `channel` | `common` | `docs` | `chore`
+- `<description>`: 무엇을 했는지 간결하게, 현재형 동사로 시작 (예: "추가", "수정", "제거")
+
+| type | 의미 | 예시 |
+|---|---|---|
+| `feat` | 기능 추가 | `feat(parser): PRIVMSG 파싱 구현` |
+| `fix` | 버그 수정 | `fix(network): poll 이벤트 누락 수정` |
+| `refactor` | 동작 변경 없는 코드 개선 | `refactor(channel): Channel::kick 중복 로직 정리` |
+| `test` | 테스트 추가/수정 | `test(parser): NICK 커맨드 파싱 테스트 추가` |
+| `docs` | 문서만 수정 | `docs: 브랜치 컨벤션 예시 추가` |
+| `chore` | 빌드/설정 등 잡무 | `chore: .gitignore에 빌드 산출물 추가` |
+
+- 커밋은 작게, 하나의 논리적 변경 단위로 (리뷰/롤백 용이)
+- 제목은 50자 내외로, 본문이 필요하면 한 줄 띄우고 "왜" 바꿨는지 서술
+
+## Issue / Task Tracking
+
+<!-- 팀 합의 후 확정 -->
+
+- GitHub Issues로 작업 단위 관리, PR에 `Closes #이슈번호` 연결
+- 라벨 예시: `network` / `parser` / `channel` / `common` / `bug` / `week1` `week2` `week3`
+
 
 ## References
 

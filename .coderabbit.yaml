@@ -1,0 +1,20 @@
+language: "ko-KR"
+tone_instructions: >
+  C++98 표준을 엄격히 준수하는 42 school IRC 서버 프로젝트입니다.
+  C++11 이상 기능(auto, nullptr, range-based for, lambda 등) 사용을 발견하면 반드시 지적해주세요.
+  non-blocking I/O(poll 기반) 구조이므로 blocking 호출이나 fork 사용은 지적 대상입니다.
+
+reviews:
+  profile: "chill"          # 처음엔 chill 추천, 팀이 익숙해지면 assertive로
+  request_changes_workflow: true   # 코멘트 미해결 시 approve 안 되도록
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    base_branches: ["main", "dev"]   # PR 대상 브랜치만 리뷰
+  path_instructions:
+    - path: "srcs/network/**"
+      instructions: "poll() 기반 fd 관리, POLLHUP/POLLERR 처리 여부, nfds 갱신 누락 여부를 중점 검토"
+    - path: "srcs/parser/**"
+      instructions: "IRC 메시지 파싱 시 \r\n 처리와 버퍼 누적 로직의 경계 조건을 중점 검토"
+    - path: "srcs/channel/**"
+      instructions: "PRIVMSG/NOTICE 명령어의 채널 권한 및 모드 처리 로직을 중점 검토"
