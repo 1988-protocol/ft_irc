@@ -7,10 +7,8 @@
 
 namespace
 {
-    // RFC2812 2.3.1 nickname 문자 집합을 간략화한 버전: 첫 글자는 알파벳이거나 special
-    // 문자, 이후 글자는 알파벳/숫자/special. 42 과제 범위에서는 전체 RFC 규격을 다
-    // 구현할 필요가 없어 최소 구현으로 두었다(길이 제한도 의도적으로 미검사) —
-    // 이 축소 범위는 irc/md/parser_message_grammar.md에 기록한다.
+    // RFC1459 2.3.1 nickname 규격: 첫 글자는 알파벳, 이후 글자는 알파벳/숫자/special(-[]\`^{}).
+    // 최대 길이는 9자 제한(RFC1459 1.2절).
     bool isValidNicknameChar(char c, bool isFirst)
     {
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
@@ -18,6 +16,8 @@ namespace
         if (!isFirst && c >= '0' && c <= '9')
             return true;
         static const std::string specials = "-[]\\`_^{|}";
+        // static을 선언함으로써 함수가 호출될 때마다 메모리를 할당하지 않고, 한번만 생성해서
+        // 이후 호출부터는 재사용
         return specials.find(c) != std::string::npos;
     }
 
