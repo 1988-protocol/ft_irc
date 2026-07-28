@@ -43,7 +43,7 @@ namespace
 // 반환했다 — 동일 닉네임 재전송은 사전에 no-op으로 분리해 회피한다. 또한 닉네임을
 // 실제로 변경할 때 이전 엔트리를 releaseNickname()으로 지우지 않으면 예전 닉네임이
 // map에 영구히 남아 다른 클라이언트가 재사용할 수 없었다 — registerNickname() 전에
-// 이전 닉네임을 해제한다. 근거: irc/md/parser_message_grammar.md 4.6.
+// 이전 닉네임을 해제한다.
 void Nick::execute(Server& server, Client& client, const Message& msg)
 {
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();

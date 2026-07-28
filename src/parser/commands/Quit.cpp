@@ -14,7 +14,7 @@
 // 이 시점에 즉시 반환해야 한다 — 그래야 다른 클라이언트가 곧바로 그 닉네임을 다시 쓸 수
 // 있다(실제 IRC 서버 동작과 동일). fd close까지 기다리면 releaseNickname 호출 지점이
 // Network 쪽으로 넘어가야 하는데, 아직 그 신호 방식이 미확정이라(위 문단) 여기서 먼저
-// 처리한다. 근거: irc/md/parser_message_grammar.md 4.6.
+// 처리한다. 
 void Quit::execute(Server& server, Client& client, const Message& msg)
 {
     if (!client.getNickname().empty())
@@ -22,4 +22,5 @@ void Quit::execute(Server& server, Client& client, const Message& msg)
 
     std::string reason = msg.hasTrailing() ? msg.getTrailing() : "Leaving";
     client.queueReply("ERROR :Closing Link: " + reason + "\r\n");
+    //client의 close하는 함수 호출해야 함.
 }
