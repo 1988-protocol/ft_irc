@@ -34,6 +34,7 @@ private:
 
     // m_commands가 소유한 포인터를 얕은 복사하면 이중 delete로 이어지므로 복사를 금지한다.
     // C++98 방식: private으로 선언만 하고 정의하지 않는다.
+    // 이렇게 private에 놓음으로써 복사나 대입을 할 수 없게 함.
     Parser(const Parser&);
     Parser& operator=(const Parser&);
 };
