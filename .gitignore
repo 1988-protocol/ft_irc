@@ -33,3 +33,7 @@ Thumbs.db
 *~
 *.bak
 *.tmp
+
+# Language server & compilation database files
+.clangd
+compile_commands.json
