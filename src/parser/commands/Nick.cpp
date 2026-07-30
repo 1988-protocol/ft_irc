@@ -78,6 +78,9 @@ namespace
 void Nick::execute(Server& server, Client& client, const Message& msg)
 {
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
+    // nick이 아직 정해지지 않은 상태에서는 무엇을 넣어야 하는지 나와있지 않음
+    // 그렇다고 공백을 할 수 없어서
+    // 시카고 대학교(University of Chicago)의 IRC 프로젝트(chirc) 명세서를 참고해서 규격을 맞춤
 
     if (msg.getParams().empty())
     {

@@ -9,9 +9,9 @@ public:
     Nick();
     Nick(const Nick& other);
     Nick& operator=(const Nick& other);
-    ~Nick();
+    virtual~Nick();
 
-    void execute(Server& server, Client& client, const Message& msg);
+    virtual void execute(Server& server, Client& client, const Message& msg);
 };
 
 #endif

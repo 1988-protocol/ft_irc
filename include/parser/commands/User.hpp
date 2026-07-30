@@ -9,9 +9,9 @@ public:
     User();
     User(const User& other);
     User& operator=(const User& other);
-    ~User();
+    virtual~User();
 
-    void execute(Server& server, Client& client, const Message& msg);
+    virtual void execute(Server& server, Client& client, const Message& msg);
 };
 
 #endif

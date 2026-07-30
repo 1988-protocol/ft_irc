@@ -9,9 +9,9 @@ public:
     Quit();
     Quit(const Quit& other);
     Quit& operator=(const Quit& other);
-    ~Quit();
+    virtual~Quit();
 
-    void execute(Server& server, Client& client, const Message& msg);
+    virtual void execute(Server& server, Client& client, const Message& msg);
 };
 
 #endif

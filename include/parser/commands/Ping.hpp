@@ -9,9 +9,9 @@ public:
     Ping();
     Ping(const Ping& other);
     Ping& operator=(const Ping& other);
-    ~Ping();
+    virtual~Ping();
 
-    void execute(Server& server, Client& client, const Message& msg);
+    virtual void execute(Server& server, Client& client, const Message& msg);
 };
 
 #endif

@@ -9,9 +9,9 @@ public:
     Pass();
     Pass(const Pass& other);
     Pass& operator=(const Pass& other);
-    ~Pass();
+    virtual~Pass();
 
-    void execute(Server& server, Client& client, const Message& msg);
+    virtual void execute(Server& server, Client& client, const Message& msg);
 };
 
 #endif
