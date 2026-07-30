@@ -9,8 +9,7 @@
 
 // 42 규정상 외부 라이브러리(gtest 등)를 쓸 수 없어, main() + check() 헬퍼로 된
 // 최소한의 assert 기반 하네스를 직접 만든다. 실패해도 나머지 케이스를 계속 돌려
-// 한 번의 실행으로 전체 결과를 다 보게 한다(CLAUDE.md 6절 검증 게이트와 연동:
-// 종료 코드 0 = 전부 통과 = 커밋 가능).
+// 한 번의 실행으로 전체 결과를 다 보게 한다(종료 코드 0 = 전부 통과 = 커밋 가능).
 namespace
 {
     int g_failureCount = 0;
@@ -100,6 +99,42 @@ namespace
             check(msg.getCommand() == "NICK", "case10: command == NICK");
             check(msg.getParams().size() == 1 && msg.getParams()[0] == "newnick", "case10: params == [newnick]");
             check(!msg.hasTrailing(), "case10: no trailing");
+        }
+        // case 11: 탭 문자 구분 방지 테스트 (Note 1)
+        {
+            Message msg = Message::parse("PRIVMSG #chan\twith_tab :hello");
+            check(msg.getParams().size() == 1 && msg.getParams()[0] == "#chan\twith_tab",
+                  "case11: Tab character should be treated as part of the token, not a delimiter");
+        }
+        // case 12: 15번째 파라미터 자동 Trailing 테스트 (콜론 없는 경우)
+        {
+            Message msg = Message::parse("CMD p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 trailing content");
+            check(msg.getParams().size() == 14, "case12: Should contain exactly 14 middle parameters");
+            check(msg.hasTrailing() && msg.getTrailing() == "p15 trailing content",
+                  "case12: The 15th parameter must automatically become trailing and preserve spaces");
+        }
+        // case 13: 15번째 파라미터 자동 Trailing 테스트 (콜론 있는 경우)
+        {
+            Message msg = Message::parse("CMD p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 :p15 trailing content");
+            check(msg.getParams().size() == 14, "case13: Should contain exactly 14 middle parameters");
+            check(msg.hasTrailing() && msg.getTrailing() == "p15 trailing content",
+                  "case13: The 15th parameter with colon prefix is parsed correctly");
+        }
+        // case 14: 콜론이 공백 없이 바로 붙어 있는 경우 (Trailing 마커 아님 검증)
+        {
+            Message msg = Message::parse("PRIVMSG #channel:name :hello");
+            check(msg.getParams().size() == 1 && msg.getParams()[0] == "#channel:name",
+                  "case14: Colon without preceding space must be treated as middle parameter part");
+        }
+
+        // 만약 네트워크 단에서 처리하게 되면 case 15를 삭제하면 된다.
+        // case 15: NUL (\0) 문자 포함된 메시지 유입 차단 테스트
+        {
+            std::string rawInput = "NICK bo";
+            rawInput.push_back('\0');
+            rawInput += "b";
+            Message msg = Message::parse(rawInput);
+            check(msg.getCommand().empty(), "case15: Message containing NUL must be rejected (command empty)");
         }
     }
 
@@ -228,7 +263,7 @@ namespace
     }
 
     // 리뷰에서 지적된 두 버그(자기 자신과 동일 닉네임 재전송 시 오탐 433, 닉네임 변경/QUIT
-    // 시 이전 닉네임 미반환)에 대한 회귀 테스트. irc/md/parser_message_grammar.md 4.6 참고.
+    // 시 이전 닉네임 미반환)에 대한 회귀 테스트.
     void testNicknameLifecycleRegressions()
     {
         Parser parser;

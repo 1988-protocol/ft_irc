@@ -6,6 +6,11 @@
 class User : public ICommand
 {
 public:
+    User();
+    User(const User& other);
+    User& operator=(const User& other);
+    ~User();
+
     void execute(Server& server, Client& client, const Message& msg);
 };
 

@@ -5,6 +5,15 @@
 #include "common/Replies.hpp"
 #include "common/Utils.hpp"
 
+Pass::Pass() {}
+Pass::Pass(const Pass& other) : ICommand(other) {}
+Pass& Pass::operator=(const Pass& other)
+{
+    (void)other;
+    return *this;
+}
+Pass::~Pass() {}
+
 // RFC1459 4.1.1 PASS: 등록 시퀀스의 첫 단계. 이미 등록된 클라이언트가 다시 보내면 462,
 // 인자가 없으면 461, 서버 비밀번호와 다르면 464를 응답한다. 성공해도 여기서는 "비밀번호
 // 확인됨" 상태만 남기고, 실제 등록 완료(001 전송) 판정은 Nick/User가 맡는다 — PASS/NICK/USER

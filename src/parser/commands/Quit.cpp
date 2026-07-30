@@ -3,6 +3,15 @@
 #include "client/Client.hpp"
 #include "server/Server.hpp"
 
+Quit::Quit() {}
+Quit::Quit(const Quit& other) : ICommand(other) {}
+Quit& Quit::operator=(const Quit& other)
+{
+    (void)other;
+    return *this;
+}
+Quit::~Quit() {}
+
 // RFC1459 4.1.6 QUIT: 클라이언트가 연결 종료를 요청한다. 실제 fd close는 Network의
 // poll 루프 몫이라 Parser가 직접 연결을 끊을 수는 없다 — outbox에 ERROR 라인을 큐잉해
 // "이 클라이언트는 종료 대상"이라는 신호만 남긴다. Network가 이 큐를 flush한 뒤 fd를

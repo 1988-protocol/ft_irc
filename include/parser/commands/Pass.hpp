@@ -6,6 +6,11 @@
 class Pass : public ICommand
 {
 public:
+    Pass();
+    Pass(const Pass& other);
+    Pass& operator=(const Pass& other);
+    ~Pass();
+
     void execute(Server& server, Client& client, const Message& msg);
 };
 

@@ -5,6 +5,17 @@
 #include "common/Replies.hpp"
 #include "common/Utils.hpp"
 
+Nick::Nick() {}
+Nick::Nick(const Nick& other) : ICommand(other) {}
+Nick& Nick::operator=(const Nick& other)
+{
+    (void)other;
+    return *this;
+}
+Nick::~Nick() {}
+
+
+
 namespace
 {
     // RFC1459 2.3.1 nickname 규격: 첫 글자는 알파벳, 이후 글자는 알파벳/숫자/special(-[]\`^{}).

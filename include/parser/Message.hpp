@@ -8,12 +8,14 @@
 //   Network -> Parser: 누적 버퍼에서 \r\n 단위로 이미 잘라낸 한 줄(std::string)
 //   Parser -> Channel/Cmd: 이 Message 객체를 그대로 넘긴다
 //
-// Rule of Zero: std::string/std::vector만 멤버로 가지므로 컴파일러가 만드는 기본
-// 복사생성자/대입연산자/소멸자로 충분하다 — 직접 정의하지 않는다.
+// OCF (Orthodox Canonical Form) 4대 요소를 명시적으로 선언 및 구현한다.
 class Message
 {
 public:
     Message();
+    Message(const Message& other);
+    Message& operator=(const Message& other);
+    ~Message();
 
     // rawLine(예: ":nick!user@host PRIVMSG #chan :hello world")을 RFC1459 2.3.1
     // 문법에 따라 prefix/command/params/trailing으로 분해한다. 구현은 Message.cpp,

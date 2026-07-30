@@ -5,6 +5,15 @@
 #include "common/Replies.hpp"
 #include "common/Utils.hpp"
 
+User::User() {}
+User::User(const User& other) : ICommand(other) {}
+User& User::operator=(const User& other)
+{
+    (void)other;
+    return *this;
+}
+User::~User() {}
+
 // RFC1459 4.1.3 USER: "<username> <hostname> <servername> :<realname>" — middle 파라미터
 // 3개 + trailing 1개가 필요하다. hostname/servername은 RFC상으로도 서버가 신뢰하지 않고
 // 직접 판단하는 값이라 실사용하지 않으며, realname을 저장할 필드도 Client.hpp 제안
