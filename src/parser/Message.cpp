@@ -48,17 +48,17 @@ Message Message::parse(const std::string& rawLine)
     if (rawLine[start] == ':')
     {
         // prefix는 첫 공백 전까지입니다.
-        std::string::size_type sp = rawLine.find(' ', start);
-        if (sp == std::string::npos || sp > end)
+        std::string::size_type space = rawLine.find(' ', start);
+        if (space == std::string::npos || space > end)
         {
             // command가 없는 비정상 메시지. prefix만 담아 반환
             msg.setPrefix(rawLine.substr(start + 1, end - start));
             return msg;
         }
-        msg.setPrefix(rawLine.substr(start + 1, sp - (start + 1)));
+        msg.setPrefix(rawLine.substr(start + 1, space - (start + 1)));
         
         // 다음 파싱할 시작점을 공백 뒤의 유효한 문자로 이동
-        start = rawLine.find_first_not_of(' ', sp + 1);
+        start = rawLine.find_first_not_of(' ', space + 1);
         if (start == std::string::npos || start > end)
             return msg;
     }
