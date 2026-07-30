@@ -1,9 +1,29 @@
+// ============================================================================
+// [Dependencies - Parser <-> Network Coordination]
+// The following Client & Server interfaces are required by Nick command:
+//
+// Client:
+//   - const std::string& getNickname() const;
+//   - void queueReply(const std::string& line);
+//   - void setNickname(const std::string& nickname);
+//   - bool isRegistered() const;
+//   - void setRegistered(bool value);
+//   - bool hasCorrectPassword() const;
+//   - const std::string& getUsername() const;
+//
+// Server:
+//   - bool isNicknameInUse(const std::string& nickname);
+//   - void releaseNickname(const std::string& nickname);
+//   - void registerNickname(const std::string& nickname, Client& client);
+// ============================================================================
+
 #include "parser/commands/Nick.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"
 #include "server/Server.hpp"
 #include "common/Replies.hpp"
 #include "common/Utils.hpp"
+
 
 Nick::Nick() {}
 Nick::Nick(const Nick& other) : ICommand(other) {}

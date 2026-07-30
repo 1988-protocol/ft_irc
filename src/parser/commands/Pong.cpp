@@ -1,3 +1,14 @@
+// ============================================================================
+// [Dependencies - Parser <-> Network Coordination]
+// The following Client & Server interfaces are required by Pong command:
+//
+// Client:
+//   - *None*
+//
+// Server:
+//   - *None*
+// ============================================================================
+
 #include "parser/commands/Pong.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"

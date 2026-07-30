@@ -1,3 +1,17 @@
+// ============================================================================
+// [Dependencies - Parser <-> Network Coordination]
+// The following Client & Server interfaces are required by Pass command:
+//
+// Client:
+//   - const std::string& getNickname() const;
+//   - bool isRegistered() const;
+//   - void queueReply(const std::string& line);
+//   - void setHasCorrectPassword(bool value);
+//
+// Server:
+//   - const std::string& getPassword() const;
+// ============================================================================
+
 #include "parser/commands/Pass.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"
