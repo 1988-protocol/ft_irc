@@ -11,7 +11,7 @@
 
 //   필요한 게터: getNickname, getUsername, isRegistered, hasCorrectPassword
 //   필요한 세터: setNickname, setRegistered
-//   필요한 멤버 함수: queueReply(IRC프로토콜의 맞는 메시지를 송신 버퍼에 저장하는 함수)
+//   필요한 멤버 함수: queueReply(IRC프로토콜의 맞는 메시지를 송신 버퍼에 저장하는 함수) // 기존 있음
 //   - const std::string& getNickname() const;
 //   - const std::string& getUsername() const;
 //   - bool hasCorrectPassword() const;

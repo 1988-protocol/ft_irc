@@ -1,6 +1,5 @@
 // ============================================================================
 // [Dependencies - Parser <-> Network Coordination]
-// The following Client & Server interfaces are required by Quit command:
 //
 // Client:
 //   - const std::string& getNickname() const;

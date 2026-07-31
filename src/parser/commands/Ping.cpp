@@ -1,14 +1,3 @@
-// ============================================================================
-// [Dependencies - Parser <-> Network Coordination]
-// The following Client & Server interfaces are required by Ping command:
-//
-// Client:
-//   - void queueReply(const std::string& line);
-//
-// Server:
-//   - *None*
-// ============================================================================
-
 #include "parser/commands/Ping.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"
