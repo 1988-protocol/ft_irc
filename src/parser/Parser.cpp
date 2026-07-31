@@ -8,10 +8,10 @@
 
 #include "parser/commands/Pass.hpp"
 #include "parser/commands/Nick.hpp"
-#include "parser/commands/User.hpp"
-#include "parser/commands/Ping.hpp"
-#include "parser/commands/Pong.hpp"
-#include "parser/commands/Quit.hpp"
+// #include "parser/commands/User.hpp"
+// #include "parser/commands/Ping.hpp"
+// #include "parser/commands/Pong.hpp"
+// #include "parser/commands/Quit.hpp"
 // #include "parser/commands/Join.hpp"
 // #include "parser/commands/Part.hpp"
 // #include "parser/commands/Kick.hpp"
@@ -25,10 +25,10 @@ Parser::Parser()
 {
     registerCommand("PASS", new Pass());
     registerCommand("NICK", new Nick());
-    registerCommand("USER", new User());
-    registerCommand("PING", new Ping());
-    registerCommand("PONG", new Pong());
-    registerCommand("QUIT", new Quit());
+    // registerCommand("USER", new User());
+    // registerCommand("PING", new Ping());
+    // registerCommand("PONG", new Pong());
+    // registerCommand("QUIT", new Quit());
     // registerCommand("JOIN", new Join());
     // registerCommand("PART", new Part());
     // registerCommand("KICK", new Kick());
@@ -67,14 +67,14 @@ void Parser::process(Server& server, Client& client, const std::string& rawLine)
 
     if (!client.isRegistered() && !isAllowedBeforeRegistration(command)) // 로그인을 안 했거나 로그인 전에 쓸 수 있는 명령어가 아니라면
     {
-        client.queueReply(reply(Numeric::ERR_NOTREGISTERED, target, ":You have not registered"));
+        client.appendToOutBuffer(reply(Numeric::ERR_NOTREGISTERED, target, ":You have not registered"));
         return;
     }
 
     std::map<std::string, ICommand*>::iterator it = m_commands.find(command);
     if (it == m_commands.end())
     {
-        client.queueReply(reply(Numeric::ERR_UNKNOWNCOMMAND, target, command + " :Unknown command"));
+        client.appendToOutBuffer(reply(Numeric::ERR_UNKNOWNCOMMAND, target, command + " :Unknown command"));
         return;
     }
 

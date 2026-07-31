@@ -4,7 +4,7 @@
 // Client:
 //   - const std::string& getNickname() const;
 //   - bool isRegistered() const;
-//   - void queueReply(const std::string& line);
+//   - void appendToOutBuffer(const std::string& line);
 //   - void setUsername(const std::string& username);
 //   - bool hasCorrectPassword() const;
 //   - void setRegistered(bool value);

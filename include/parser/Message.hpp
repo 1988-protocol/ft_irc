@@ -13,9 +13,10 @@ class Message
 {
 public:
     Message();
-    Message(const Message& other);
-    Message& operator=(const Message& other);
-    ~Message();
+    // 미구현으로 인한 컴파일에러가 나서 우선 주석처리 해두었습니다. 필요하면 구현해야 합니다.
+    // Message(const Message& other);
+    // Message& operator=(const Message& other);
+    // ~Message();
 
 // getter
     // rawLine(예: ":nick!user@host PRIVMSG #chan :hello world")을 RFC1459 2.3.1

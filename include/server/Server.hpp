@@ -8,10 +8,15 @@
 #include "server/Socket.hpp"
 #include "server/PollManager.hpp"
 #include "client/Client.hpp"
+#include "parser/Parser.hpp"
 
 class Server{
     
     private :
+        Server();
+        Server(Server const& other);
+        Server& operator=(const Server& other);
+
         int             m_port;
         std::string     m_password;
 
@@ -31,12 +36,14 @@ class Server{
         void setSignal();
         void handleLine(Client *client, const std::string &line);
 
-    public :
-        //ocf를 위한 것들. 구현에대해서는 합치면서 더 자세하게 봐야할 듯
-        Server();
-        Server(Server const& other);
-        Server& operator=(const Server& other);
+        // Server Auth 관련 ────────────────────────────────────────────────────────
+        Parser         m_parser;
+        std::map<std::string, Client*> m_nicknames; // 닉네임 -> 클라이언트 포인터
 
+        // Server cmds 관련────────────────────────────────────────────────────────
+
+    public :
+        //ocf
         Server(int port, const std::string &password);
         ~Server();
         
@@ -44,6 +51,15 @@ class Server{
         void    run();
 
         static void signalHandler(int sig);
+
+        // Server Auth 관련 ────────────────────────────────────────────────────────
+        const std::string& getPassword() const;
+        bool isNicknameInUse(const std::string& nickname) const;
+        void registerNickname(const std::string& nickname, Client& client);
+        void releaseNickname(const std::string& nickname);
+
+        //Server cmds 관련────────────────────────────────────────────────────────
+
 };
 
 #endif

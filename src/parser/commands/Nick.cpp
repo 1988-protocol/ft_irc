@@ -11,7 +11,7 @@
 
 //   필요한 게터: getNickname, getUsername, isRegistered, hasCorrectPassword
 //   필요한 세터: setNickname, setRegistered
-//   필요한 멤버 함수: queueReply(IRC프로토콜의 맞는 메시지를 송신 버퍼에 저장하는 함수) // 기존 있음
+//   필요한 멤버 함수: appendToOutBuffer(IRC프로토콜의 맞는 메시지를 송신 버퍼에 저장하는 함수) // 기존 있음
 //   - const std::string& getNickname() const;
 //   - const std::string& getUsername() const;
 //   - bool hasCorrectPassword() const;
@@ -20,7 +20,7 @@
 //   - void setNickname(const std::string& nickname);
 //   - void setRegistered(bool value);
 
-//   - void queueReply(const std::string& line); 
+//   - void appendToOutBuffer(const std::string& line); 
 //
 // Server:
 //   필요한 멤버 함수(메서드)
@@ -96,11 +96,11 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
 
     if (msg.getParams().empty())
     {
-        // (예)queueReply는 Reply라는 메시지 포맷터에 의해 완벽히 완성된 문자열(\r\n이 포함된 string)을 매개변수로 받아서
+        // (예)appendToOutBuffer는 Reply라는 메시지 포맷터에 의해 완벽히 완성된 문자열(\r\n이 포함된 string)을 매개변수로 받아서
         // client의 송신 버퍼에 데이터를 추가해야 합니다. 
         // 일종의 perror 의 역할을 하지만,  네트워크 멀티플렉싱(poll/select) 서버에서 소켓을 대상으로 send() 시스템 콜을 즉시 호출하면 안 되기 때문에 
         // 버퍼에 담아두었다가 한 번에 전송하는 구조를 사용합니다.
-        client.queueReply(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
+        client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
         return;
     }
 
@@ -111,12 +111,12 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
 
     if (!isValidNickname(nickname))
     {
-        client.queueReply(reply(Numeric::ERR_ERRONEUSNICKNAME, target, nickname + " :Erroneous nickname"));
+        client.appendToOutBuffer(reply(Numeric::ERR_ERRONEUSNICKNAME, target, nickname + " :Erroneous nickname"));
         return;
     }
     if (server.isNicknameInUse(nickname))
     {
-        client.queueReply(reply(Numeric::ERR_NICKNAMEINUSE, target, nickname + " :Nickname is already in use"));
+        client.appendToOutBuffer(reply(Numeric::ERR_NICKNAMEINUSE, target, nickname + " :Nickname is already in use"));
         return;
     }
     // 여기는 Nick을 바꾸고 싶은 상황. 
@@ -131,7 +131,7 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
     if (!client.isRegistered() && client.hasCorrectPassword() && !client.getUsername().empty())
     {
         client.setRegistered(true); // 클라이언트 등록
-        client.queueReply(reply(Numeric::RPL_WELCOME, nickname, ":Welcome to the IRC network, " + nickname));
+        client.appendToOutBuffer(reply(Numeric::RPL_WELCOME, nickname, ":Welcome to the IRC network, " + nickname));
         // 환영해요.
     }
 }

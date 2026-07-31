@@ -3,7 +3,7 @@
 //
 // Client:
 //   - const std::string& getNickname() const;
-//   - void queueReply(const std::string& line);
+//   - void appendToOutBuffer(const std::string& line);
 //
 // Server:
 //   - void releaseNickname(const std::string& nickname);

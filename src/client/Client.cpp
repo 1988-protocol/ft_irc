@@ -41,8 +41,14 @@ bool    Client::extractLine(std::string &out)
 {
     std::string::size_type pos = m_inBuffer.find('\n');
     if (pos == std::string::npos)
+    {
+        // RFC 2812 2.3: 메시지는 종단 CRLF를 포함해 512바이트를 넘을 수 없다.
+        // 아직 개행이 없는데 누적 버퍼가 이미 초과했다면 그 자체로 위반이다.
+        if (m_inBuffer.size() > 512)
+            markForDeletion();
         return false;
-    
+    }
+
     out = m_inBuffer.substr(0, pos);
     m_inBuffer.erase(0, pos + 1);
 
@@ -87,14 +93,31 @@ bool    Client::needsDisconnect() const
 }
 
 // ────────────────────────────────────────────────────────
+// getter
+// ────────────────────────────────────────────────────────
 
-int Client::getFd() const
-{
-    return m_fd;
-}
+int Client::getFd() const             {return m_fd;}
 
-const std::string &Client::getIp() const
-{
-    return m_ip;
-}
+const std::string &Client::getIp() const    {return m_ip;}
+
+bool Client::isRegistered() const           {return m_registered;}
+
+bool Client::hasCorrectPassword() const     {return m_hasCorrectPassword;}
+
+const std::string &Client::getNickname() const   {return m_nickname;}
+
+const std::string &Client::getUsername() const   {return m_username;}
+
+// ────────────────────────────────────────────────────────
+// setter
+// ────────────────────────────────────────────────────────
+
+void Client::setNickname(const std::string &nickname) {m_nickname = nickname;}
+
+void Client::setUsername(const std::string &username) {m_username = username;}
+
+void Client::setRegistered(bool registered) {m_registered = registered;}
+
+void Client::setHasCorrectPassword(bool hasCorrectPassword) {m_hasCorrectPassword = hasCorrectPassword;}
+
 

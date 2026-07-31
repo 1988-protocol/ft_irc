@@ -27,7 +27,7 @@ void Client::setNickname(const std::string& nickname) { m_nickname = nickname; }
 const std::string& Client::getUsername() const { return m_username; }
 void Client::setUsername(const std::string& username) { m_username = username; }
 
-void Client::queueReply(const std::string& line) { m_outbox += line; }
+void Client::appendToOutBuffer(const std::string& line) { m_outbox += line; }
 const std::string& Client::getOutbox() const { return m_outbox; }
 void Client::clearOutbox() { m_outbox.clear(); }
 

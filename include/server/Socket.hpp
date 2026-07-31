@@ -8,10 +8,10 @@ class Socket
 {
     private:
         int m_fd;
-    public:
+        
         Socket(Socket const &other);
         Socket &operator=(Socket const &other);
-        
+    public:        
         Socket();
         ~Socket();
 

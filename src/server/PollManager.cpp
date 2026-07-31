@@ -46,9 +46,9 @@ void    PollManager::setWritable(int fd, bool on)
         if (it->fd == fd)
         {
             if(on)
-                m_pfds[fd].events |= POLLOUT;
+                it->events |= POLLOUT;
             else
-                m_pfds[fd].events &= ~POLLOUT;
+                it->events &= ~POLLOUT;
             return;
         }
     }

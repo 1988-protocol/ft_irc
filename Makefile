@@ -9,18 +9,29 @@ CXX			= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
 INCLUDES	= -I include
 
-# ── 소스 (include/ 와 미러링되는 srcs/ 구조) ──────────────────────────────
-SRC_DIR		= srcs
+# ── 소스 (include/ 와 미러링되는 src/ 구조) ──────────────────────────────
+SRC_DIR		= src
 OBJ_DIR		= obj
 
 SRCS		= \
-	main.cpp \
+	common/main.cpp \
+	common/Utils.cpp \
 	server/Server.cpp \
+	server/ServerAuth.cpp \
+	server/Servercmds.cpp \
 	server/PollManager.cpp \
 	server/Socket.cpp \
-	client/Client.cpp
+	client/Client.cpp \
+	parser/Message.cpp \
+	parser/Parser.cpp \
+	parser/commands/Nick.cpp \
+	parser/commands/Pass.cpp
+	# parser/commands/Ping.cpp \
+	# parser/commands/Pong.cpp \
+	# parser/commands/Quit.cpp \
+	# parser/commands/User.cpp
 
-# srcs/server/Server.cpp -> obj/server/Server.o (하위 구조 유지)
+# src/server/Server.cpp -> obj/server/Server.o (하위 구조 유지)
 OBJS		= $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 
 # ── 규칙 ──────────────────────────────────────────────────────────────────

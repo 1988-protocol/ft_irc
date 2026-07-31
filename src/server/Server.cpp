@@ -63,7 +63,7 @@ void Server::run(){
             short re = m_poll.getEvent(i);
 
             int listenFd = m_listener.getFd();
-            if (re & (POLL_ERR | POLL_HUP | POLLNVAL) && fd != listenFd)
+            if (re & (POLLERR | POLLHUP | POLLNVAL) && fd != listenFd)
             {
                 disconnectClient(fd);
                 --i;
@@ -180,13 +180,10 @@ void Server::receiveFromClient(int fd)
         return ;
     }
 
-    if(recv_len > 512 && (recv_len == 512 && buf[512] != '\n' && buf[511] != '\r'))
-    {
-        //에러 처리
-        std::cout << "[Server] 바이트 초과\n" << std::endl; 
-    }
-
-    Client *client = m_clients[fd];
+    std::map<int, Client*>::iterator it = m_clients.find(fd);
+    if (it == m_clients.end())
+        return;
+    Client *client = it->second;
     client->appendToInBuffer(std::string(buf, recv_len));
 
     std::string line;
@@ -205,15 +202,23 @@ void    Server::handleLine(Client *client, const std::string &line)
 {
     std::cout << "[recv fd " << client->getFd() << "]" << line << std::endl;
 
-	std::string	reply = "echo: " + line + "\r\n";
-
-    client->appendToOutBuffer(reply);
+    m_parser.process(*this, *client, line);
+    //client->appendToOutBuffer(reply);
     m_poll.setWritable(client->getFd(), true);
+
+    // 디버깅용 출력
+    if (!client->getNickname().empty())
+        std::cout << "[recv fd " << client->getFd() << " ] nick: " << client->getNickname() << std::endl;
+    if (client->hasCorrectPassword())
+        std::cout << "[recv fd " << client->getFd() << " ] password correct " << std::endl;
 }
 
 void Server::sendToClient(int fd)
 {
-    Client  *client  = m_clients[fd];
+    std::map<int, Client*>::iterator it = m_clients.find(fd);
+    if (it == m_clients.end())
+        return;
+    Client  *client  = it->second;
     std::string &out = client->getOutBuffer();
 
     if (out.empty())

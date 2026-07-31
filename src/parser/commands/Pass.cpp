@@ -38,17 +38,17 @@ void Pass::execute(Server& server, Client& client, const Message& msg)
 
     if (client.isRegistered()) // 462: 이미 서버에 들어왔는데 왜 비밀번호를 또 보내는건가요?
     {
-        client.queueReply(reply(Numeric::ERR_ALREADYREGISTRED, target, ":You may not reregister"));
+        client.appendToOutBuffer(reply(Numeric::ERR_ALREADYREGISTRED, target, ":You may not reregister"));
         return;
     }
     if (msg.getParams().empty()) // 461: 비밀번호 인자가 없어요. PASS 뒤에 아무것도 적지 않았음
     {
-        client.queueReply(reply(Numeric::ERR_NEEDMOREPARAMS, target, "PASS :Not enough parameters"));
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "PASS :Not enough parameters"));
         return;
     }
     if (msg.getParams()[0] != server.getPassword()) // 464: 비밀번호가 틀렸어요. 서버 비밀번호와 다름
     {
-        client.queueReply(reply(Numeric::ERR_PASSWDMISMATCH, target, ":Password incorrect"));
+        client.appendToOutBuffer(reply(Numeric::ERR_PASSWDMISMATCH, target, ":Password incorrect"));
         return;
     }
     client.setHasCorrectPassword(true);
