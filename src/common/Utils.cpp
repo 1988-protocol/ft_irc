@@ -1,0 +1,88 @@
+#include "common/Utils.hpp"
+#include <sstream>
+#include <algorithm>
+#include <cctype>
+
+// 인스턴스화가 불필요한 class 대신 namespace를 사용하는 것도 구조적, 성능적으로 좋은 C++ 스타일이라고 함.
+// 이건 익명 네임스페이스(unnamed namespace)라고 부릅니다. = C언어의 static 과 같은 기능.
+// 다른 파일에서는 이 내용물을 볼 수 없음
+namespace
+{
+    // 서버 식별 이름. Server 클래스가 아직 실구현되지 않았고(Network Phase1 몫),
+    // Parser의 reply() 헬퍼는 그와 무관하게 지금 바로 동작해야 하므로 상수로 둔다.
+    // Server 실구현 이후 실제 호스트명이 필요해지면 이 지점만 교체하면 된다.
+    const char* SERVER_NAME = "ircserv";
+}
+
+std::string getServerName()
+{
+    return SERVER_NAME;
+}
+
+std::string reply(int code, const std::string& target, const std::string& msg)
+{
+    // ":ircserv 431 * :No nickname given\r\n" 이와 같이 출력하기 위한 하드코딩
+    // numeric은 RFC1459상 항상 3자리 문자열(예: "001", "461") — 앞을 '0'으로 채운다.
+    std::ostringstream codeStream;
+    if (code < 100)
+        codeStream << '0';
+    if (code < 10)
+        codeStream << '0';
+    codeStream << code;
+
+    std::string line = ":";
+    line += SERVER_NAME;
+    line += ' ';
+    line += codeStream.str();
+    line += ' ';
+    line += target;
+    line += ' ';
+    line += msg;
+    line += "\r\n";
+    return line;
+}
+
+// 명명된 네임스페이스
+namespace Utils
+{
+    std::vector<std::string> split(const std::string& s, char delim)
+    {
+        std::vector<std::string> result;
+        std::string::size_type start = 0;
+        std::string::size_type end = s.find(delim);
+
+        while (end != std::string::npos)
+        {
+            // 연속된 delim은 빈 조각을 만들지 않고 하나의 구분자로 취급한다
+            // (IRC 라인의 중복 공백 엣지 케이스 대응).
+            if (end != start)
+            {
+                result.push_back(s.substr(start, end - start));
+            }
+            start = end + 1;
+            end = s.find(delim, start);
+        }
+        if (start < s.size())
+        {
+            result.push_back(s.substr(start));
+        }
+        return result;
+    }
+
+    std::string trim(const std::string& s)
+    {
+        std::string::size_type start = s.find_first_not_of(' ');
+        if (start == std::string::npos)
+            return "";
+        std::string::size_type end = s.find_last_not_of(' ');
+        return s.substr(start, end - start + 1);
+    }
+
+    std::string toUpper(const std::string& s)
+    {
+        std::string result = s;
+        // std::transform과 안전한 인라인 함수 safeToUpper를 사용하여 대문자로 변환합니다.
+        std::transform(result.begin(), result.end(), result.begin(), safeToUpper);
+        return result;
+    }
+}
