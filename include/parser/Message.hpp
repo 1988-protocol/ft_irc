@@ -17,6 +17,7 @@ public:
     Message& operator=(const Message& other);
     ~Message();
 
+// getter
     // rawLine(예: ":nick!user@host PRIVMSG #chan :hello world")을 RFC1459 2.3.1
     // 문법에 따라 prefix/command/params/trailing으로 분해한다. 구현은 Message.cpp,
     // Phase1에서 Parser가 채운다.
@@ -26,7 +27,6 @@ public:
     const std::string& getCommand() const;
     const std::vector<std::string>& getParams() const;
     const std::string& getTrailing() const;
-
     // trailing이 "존재하되 빈 문자열"인 경우(예: "PRIVMSG #chan :")와 "애초에 trailing이
     // 없는 경우"(예: "NICK bob")를 구분해야 하므로 getTrailing()의 빈 문자열만으로는
     // 판별할 수 없다 — 이 플래그로 명시적으로 구분한다.
@@ -34,8 +34,9 @@ public:
 
     void setPrefix(const std::string& prefix);
     void setCommand(const std::string& command);
-    void addParam(const std::string& param);
     void setTrailing(const std::string& trailing);
+
+    void addParam(const std::string& param);
 
 private:
     std::string m_prefix;

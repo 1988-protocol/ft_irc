@@ -13,7 +13,7 @@ class ICommand;
 class Parser
 {
 public:
-    // 생성자에서 PASS/NICK/USER/PING/PONG/QUIT 6개 핸들러를 생성해 등록한다.
+    // 생성자에서 PASS/NICK/USER/PING/PONG/QUIT 및 채널/공용 명령어 핸들러를 생성해 등록한다.
     Parser();
 
     // 생성자에서 new로 소유한 ICommand*들을 여기서 delete한다(Rule of Three 중 소멸자).

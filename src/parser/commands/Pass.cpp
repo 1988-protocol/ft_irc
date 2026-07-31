@@ -1,14 +1,13 @@
 // ============================================================================
 // [Dependencies - Parser <-> Network Coordination]
-// The following Client & Server interfaces are required by Pass command:
+// 클라이언트와 서버가 비밀번호를 처리하기 위해 필요한 인터페이스
 //
 // Client:
-//   - const std::string& getNickname() const;
-//   - bool isRegistered() const;
-//   - void queueReply(const std::string& line);
+//   필요한 세터: setHasCorrectPassword
 //   - void setHasCorrectPassword(bool value);
 //
 // Server:
+//   필요한 게터: getPassword
 //   - const std::string& getPassword() const;
 // ============================================================================
 
@@ -37,17 +36,17 @@ void Pass::execute(Server& server, Client& client, const Message& msg)
 {
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
-    if (client.isRegistered())
+    if (client.isRegistered()) // 462: 이미 서버에 들어왔는데 왜 비밀번호를 또 보내는건가요?
     {
         client.queueReply(reply(Numeric::ERR_ALREADYREGISTRED, target, ":You may not reregister"));
         return;
     }
-    if (msg.getParams().empty())
+    if (msg.getParams().empty()) // 461: 비밀번호 인자가 없어요. PASS 뒤에 아무것도 적지 않았음
     {
         client.queueReply(reply(Numeric::ERR_NEEDMOREPARAMS, target, "PASS :Not enough parameters"));
         return;
     }
-    if (msg.getParams()[0] != server.getPassword())
+    if (msg.getParams()[0] != server.getPassword()) // 464: 비밀번호가 틀렸어요. 서버 비밀번호와 다름
     {
         client.queueReply(reply(Numeric::ERR_PASSWDMISMATCH, target, ":Password incorrect"));
         return;

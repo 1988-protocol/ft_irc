@@ -21,6 +21,7 @@ std::string getServerName()
 
 std::string reply(int code, const std::string& target, const std::string& msg)
 {
+    // ":ircserv 431 * :No nickname given\r\n" 이와 같이 출력하기 위한 하드코딩
     // numeric은 RFC1459상 항상 3자리 문자열(예: "001", "461") — 앞을 '0'으로 채운다.
     std::ostringstream codeStream;
     if (code < 100)

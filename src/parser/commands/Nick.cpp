@@ -1,20 +1,32 @@
 // ============================================================================
 // [Dependencies - Parser <-> Network Coordination]
-// The following Client & Server interfaces are required by Nick command:
+// 클라이언트와 서버가 닉네임을 처리하기 위해 필요한 인터페이스
 //
 // Client:
+//   필요한 멤버 변수:     
+//   - bool m_registered;
+//   - bool m_hasCorrectPassword;
+//   - std::string m_nickname;
+//   - std::string m_username;
+
+//   필요한 게터: getNickname, getUsername, isRegistered, hasCorrectPassword
+//   필요한 세터: setNickname, setRegistered
+//   필요한 멤버 함수: queueReply(IRC프로토콜의 맞는 메시지를 송신 버퍼에 저장하는 함수)
 //   - const std::string& getNickname() const;
-//   - void queueReply(const std::string& line);
-//   - void setNickname(const std::string& nickname);
-//   - bool isRegistered() const;
-//   - void setRegistered(bool value);
-//   - bool hasCorrectPassword() const;
 //   - const std::string& getUsername() const;
+//   - bool hasCorrectPassword() const;
+//   - bool isRegistered() const;
+
+//   - void setNickname(const std::string& nickname);
+//   - void setRegistered(bool value);
+
+//   - void queueReply(const std::string& line); 
 //
 // Server:
-//   - bool isNicknameInUse(const std::string& nickname);
-//   - void releaseNickname(const std::string& nickname);
-//   - void registerNickname(const std::string& nickname, Client& client);
+//   필요한 멤버 함수(메서드)
+//   - bool isNicknameInUse(const std::string& nickname); 질의
+//   - void releaseNickname(const std::string& nickname); 상태 변경
+//   - void registerNickname(const std::string& nickname, Client& client); 상태 변경
 // ============================================================================
 
 #include "parser/commands/Nick.hpp"
@@ -84,6 +96,10 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
 
     if (msg.getParams().empty())
     {
+        // (예)queueReply는 Reply라는 메시지 포맷터에 의해 완벽히 완성된 문자열(\r\n이 포함된 string)을 매개변수로 받아서
+        // client의 송신 버퍼에 데이터를 추가해야 합니다. 
+        // 일종의 perror 의 역할을 하지만,  네트워크 멀티플렉싱(poll/select) 서버에서 소켓을 대상으로 send() 시스템 콜을 즉시 호출하면 안 되기 때문에 
+        // 버퍼에 담아두었다가 한 번에 전송하는 구조를 사용합니다.
         client.queueReply(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
         return;
     }
@@ -103,15 +119,19 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         client.queueReply(reply(Numeric::ERR_NICKNAMEINUSE, target, nickname + " :Nickname is already in use"));
         return;
     }
-
+    // 여기는 Nick을 바꾸고 싶은 상황. 
+    // 빈 클라이언트에 이름을 등록 중이라면 넘어간다.
     if (!client.getNickname().empty())
-        server.releaseNickname(client.getNickname());
-    server.registerNickname(nickname, client);
-    client.setNickname(nickname);
+        server.releaseNickname(client.getNickname()); // 서버에 기존 닉네임 해제
+    server.registerNickname(nickname, client); // 서버에 닉네임 등록
+    client.setNickname(nickname); // 클라이언트 닉네임 설정
 
+    // 등록 부분
+    // 등록되지 않았고, 클라이언트의 올바를 비밀번호이며, 유저 정보가 있다면.
     if (!client.isRegistered() && client.hasCorrectPassword() && !client.getUsername().empty())
     {
-        client.setRegistered(true);
+        client.setRegistered(true); // 클라이언트 등록
         client.queueReply(reply(Numeric::RPL_WELCOME, nickname, ":Welcome to the IRC network, " + nickname));
+        // 환영해요.
     }
 }

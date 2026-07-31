@@ -49,18 +49,16 @@ Message Message::parse(const std::string& rawLine)
     {
         // prefix는 첫 공백 전까지입니다.
         std::string::size_type space = rawLine.find(' ', start);
-        if (space == std::string::npos || space > end)
+        if (space == std::string::npos || space > end) // ":Harry", ":Harry    "
         {
             // command가 없는 비정상 메시지. prefix만 담아 반환
-            msg.setPrefix(rawLine.substr(start + 1, end - start));
-            return msg;
+            msg.setPrefix(rawLine.substr(start + 1, end - start)); // :다음부터 -> 이름만 prefix로 반환
+            return msg; // 여기서 끝내줌
         }
-        msg.setPrefix(rawLine.substr(start + 1, space - (start + 1)));
+        msg.setPrefix(rawLine.substr(start + 1, space - (start + 1))); // 스페이스 전까지 -> prefix
         
         // 다음 파싱할 시작점을 공백 뒤의 유효한 문자로 이동
-        start = rawLine.find_first_not_of(' ', space + 1);
-        if (start == std::string::npos || start > end)
-            return msg;
+        start = rawLine.find_first_not_of(' ', space + 1); // start위치 바꿈
     }
 
     // 3. Trailing 파싱 (유효 구간 내에서 " :" 마커 탐색)
@@ -99,3 +97,15 @@ Message Message::parse(const std::string& rawLine)
 
     return msg;
 }
+
+
+// 예시문
+// "PRIVMSG #lobby :Hello World! How are you?"
+// (COMMAND PARAM) TRAILING
+// MIDDLE
+
+// ":Alice NICK Bob"
+// PREFIX (COMMAND PARAM)
+//              MIDDLE
+
+
