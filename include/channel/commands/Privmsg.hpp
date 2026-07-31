@@ -1,9 +1,9 @@
 #ifndef PRIVMSG_HPP
 # define PRIVMSG_HPP
 
-# include "ACommand.hpp"
+# include "ICommand.hpp"
 
-class Privmsg : public ACommand
+class Privmsg : public ICommand
 {
 public:
     Privmsg(Server* server);

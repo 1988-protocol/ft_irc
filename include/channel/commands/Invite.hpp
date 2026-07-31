@@ -1,9 +1,9 @@
 #ifndef INVITE_HPP
 # define INVITE_HPP
 
-# include "ACommand.hpp"
+# include "ICommand.hpp"
 
-class Invite : public ACommand
+class Invite : public ICommand
 {
 public:
     Invite(Server* server);

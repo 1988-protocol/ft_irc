@@ -1,5 +1,5 @@
-#ifndef CHANNEL_HPP
-# define CHANNEL_HPP
+#ifndef CHANNELm_HPP
+# define CHANNELm_HPP
 
 #include <string>
 #include <vector>
@@ -9,28 +9,60 @@ class Client;
 class Channel
 {
 private:
-	std::string _name; // 채널 이름
-	std::string _topic; // 채널 주제 topic 명령어로 지정
-	std::vector<Client *> _users; // 채널에 참여한 User 목록
-	std::vector<Client *> _operators; // 채널 운영자 목록 (서버가 하나 있다는 말이 채널이 꼭 하나여야 한다는 말이 아님)
+    std::string m_name;       // 채널 이름
+    std::string m_topic;      // 채널 주제
+    std::string m_key;        // 채널 비밀번호 (+k)
+    bool        m_isInvite;   // 초대 전용 여부 (+i)
+    bool        m_isTopicOp;  // 방장만 토픽 변경 가능 여부 (+t)
+    int         m_userLimit;  // 인원 제한 (+l, 0이면 제한 없음)
+
+    std::vector<Client *> m_users;        // 참여자 목록
+    std::vector<Client *> m_operators;    // 운영자 목록 (+o)
+    std::vector<Client *> m_invitedUsers; // 초대받은 유저 목록 (+i)
 
 public:
-	Channel(std::string name);
-	~Channel();
+    Channel(std::string name);
+    ~Channel();
 
-	std::string getName() const; // 채널 이름 반환
-	std::string getTopic() const; // 채널 topic 반환
-	std::vector<Client *> getUsers() const; // 채널에 참여한 User 목록 반환
-	std::vector<Client *> getOperators() const; // 채널 operator 목록 반환
+    std::string getName() const;
+    std::string getTopic() const;
+    std::string getKey() const;
+    std::string getModeString() const; // 현재 모드 상태 문자열 반환 (예: "+itk")
+    const std::vector<Client *> getUsers() const;
+    const std::vector<Client *> getOperators() const;
 
-	void setTopic(std::string topic); // 채널 topic 설정
-	void addUser(Client *client); // 채널에 User 추가
-	void removeUser(Client *client); // 채널에서 User 제거
+    void setTopic(std::string topic);
+    void addUser(Client *client);
+    void removeUser(Client *client);
 
-	void addOperator(Client *client); // 채널 operator 추가
-	void removeOperator(Client *client); // 채널 operator 제거
+    // Key (+k) 관련
+    bool isKeyModeActive() const;
+    bool checkKey(const std::string& key) const;
+    void setKey(const std::string& key);
+    void removeKey();
 
-	bool isOperator(Client *client) const; // 해당 User가 채널 operator인지 확인
+    // Invite Only (+i) 관련
+    bool isInviteOnly() const;
+    void setInviteOnly(bool flag);
+    bool isInvited(Client *client) const;
+    void addInvite(Client *client);
+    void removeInvite(Client *client);
+
+    // Topic Restriction (+t) 관련
+    bool isTopicOpOnly() const;
+    void setTopicOpOnly(bool flag);
+
+    // User Limit (+l) 관련
+    bool hasUserLimit() const;
+    int  getUserLimit() const;
+    void setUserLimit(int limit);
+    void removeUserLimit();
+    bool isFull() const;
+
+    // Operator (+o) 관련
+    bool isOperator(Client* client) const;
+    void addOperator(Client* client);
+    void removeOperator(Client* client);
 };
 
 #endif

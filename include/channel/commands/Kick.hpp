@@ -1,9 +1,9 @@
 #ifndef KICK_HPP
 # define KICK_HPP
 
-# include "Acommand.hpp"
+# include "ICommand.hpp"
 
-class Kick : public Acommand
+class Kick : public ICommand
 {
 public:
     Kick(Server* server);

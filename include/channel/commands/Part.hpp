@@ -1,9 +1,9 @@
 #ifndef PART_HPP
 # define PART_HPP
 
-# include "ACommand.hpp"
+# include "ICommand.hpp"
 
-class Part : public ACommand
+class Part : public ICommand
 {
 public:
     Part(Server* server);
