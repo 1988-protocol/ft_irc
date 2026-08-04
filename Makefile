@@ -14,7 +14,7 @@ SRC_DIR		= src
 OBJ_DIR		= obj
 
 SRCS		= \
-	common/main.cpp \
+	main.cpp \
 	common/Utils.cpp \
 	server/Server.cpp \
 	server/ServerAuth.cpp \
