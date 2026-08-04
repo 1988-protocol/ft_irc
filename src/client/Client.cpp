@@ -5,8 +5,10 @@
 // ────────────────────────────────────────────────────────
 
 Client::Client() : m_fd(-1), m_ip(""), m_inBuffer(""), m_outBuffer(""), m_markedForDeletion(false) {}
+// m_registered(false), m_hasCorrectPassword(false) 초기화 누락
 
 Client::Client(int fd, std::string ip) : m_fd(fd), m_ip(ip), m_inBuffer(""), m_outBuffer(""), m_markedForDeletion(false) {}
+// m_registered(false), m_hasCorrectPassword(false) 초기화 누락 마찬가지
 
 Client::Client(const Client& other)
 {
@@ -22,6 +24,15 @@ Client& Client::operator=(const Client& other)
         this->m_inBuffer = other.m_inBuffer;
         this->m_outBuffer = other.m_outBuffer;
         this->m_markedForDeletion = other.m_markedForDeletion;
+
+        // 인증 및 정보 필드 복사 추가 해야 함.
+        // this->m_registered = other.m_registered;
+        // this->m_hasCorrectPassword = other.m_hasCorrectPassword;
+        // this->m_nickname = other.m_nickname;
+        // this->m_username = other.m_username;
+        // this->m_realname = other.m_realname;
+        // this->m_hostname = other.m_hostname;
+        // this->m_servername = other.m_servername;
     }
     return *this;
 }
