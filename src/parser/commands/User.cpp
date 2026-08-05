@@ -44,7 +44,7 @@ void User::execute(Server& server, Client& client, const Message& msg)
         client.appendToOutBuffer(reply(Numeric::ERR_ALREADYREGISTRED, target, ":You may not reregister"));
         return;
     }
-    if (msg.getParams().size() < 3 || !msg.hasTrailing())
+    if (msg.getParams().size() != 3 || !msg.hasTrailing())
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "USER :Not enough parameters"));
         return;
