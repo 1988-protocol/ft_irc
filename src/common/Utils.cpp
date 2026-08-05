@@ -117,7 +117,9 @@ namespace Utils
         {
             if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
                 return true;
-            if (!isFirst && c >= '0' && c <= '9')
+            if (isFirst)
+                return false; // 첫 글자는 알파벳만 허용 (RFC1459 2.3.1)
+            if (c >= '0' && c <= '9')
                 return true;
             static const std::string specials = "-[]\\`^{}";
             return specials.find(c) != std::string::npos;
@@ -126,7 +128,7 @@ namespace Utils
 
     bool isValidNickname(const std::string& nickname)
     {
-        if (nickname.empty())
+        if (nickname.empty() || nickname.size() > 9)
             return false;
         for (std::string::size_type i = 0; i < nickname.size(); ++i)
         {
