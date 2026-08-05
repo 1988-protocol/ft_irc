@@ -92,9 +92,8 @@ void Server::run(){
                     }
                 }
             }
-
             // 2) 보낼 수 있는 상황이 됐음
-            else if(re & POLLOUT)
+            if(re & POLLOUT)
             {
                 if(m_clients.find(fd) != m_clients.end())
                     sendToClient(fd);
@@ -113,7 +112,6 @@ void Server::disconnectClient(int fd)
     std::cout << "[server] 연결 종료 (fd " << fd << ")" << std::endl;
     m_poll.remove(fd);
     close(fd);
-    // 여기서 댕글링 포인터 위험.  m_nicknames 에 대한 주소값은 제대로 해제되지 않았다고 합니다.
     delete it->second;
     m_clients.erase(it); 
 }
@@ -139,7 +137,6 @@ void Server::acceptNewClient()
             else
                 break; // 예외처리
         }
-
             // accept 성공
             // 새로운 fd를 논블로킹으로 설정
             Socket::setNonBlocking(clientFd); 
@@ -191,7 +188,7 @@ void Server::receiveFromClient(int fd)
     while (client->extractLine(line))
         handleLine(client, line);
     
-    if (client->needsDisconnect() && !client->hasPendingOutput())
+    if (client->needsDisconnect())
         disconnectClient(fd);
 }
 

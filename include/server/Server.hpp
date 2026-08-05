@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <map>
@@ -38,7 +39,7 @@ class Server{
 
         // Server Auth 관련 ────────────────────────────────────────────────────────
         Parser         m_parser;
-        std::map<std::string, Client*> m_nicknames; // 닉네임 -> 클라이언트 포인터
+        std::map<std::string, Client*> m_nicknames;
 
         // Server cmds 관련────────────────────────────────────────────────────────
 
@@ -55,9 +56,7 @@ class Server{
         // Server Auth 관련 ────────────────────────────────────────────────────────
         const std::string& getPassword() const;
         bool isNicknameInUse(const std::string& nickname) const;
-        void registerNickname(const std::string& nickname, Client& client);
-        void releaseNickname(const std::string& nickname);
-
+        
         //Server cmds 관련────────────────────────────────────────────────────────
 
 };

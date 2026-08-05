@@ -4,11 +4,13 @@
 // ocf
 // ────────────────────────────────────────────────────────
 
-Client::Client() : m_fd(-1), m_ip(""), m_inBuffer(""), m_outBuffer(""), m_markedForDeletion(false) {}
-// m_registered(false), m_hasCorrectPassword(false) 초기화 누락
+Client::Client() : m_fd(-1), m_ip(""), m_inBuffer(""), m_outBuffer(""),
+                    m_markedForDeletion(false), m_registered(false), m_hasCorrectPassword(false),
+                    m_nickname(""), m_username(""), m_realname(""), m_hostname(""), m_servername("") {}
 
-Client::Client(int fd, std::string ip) : m_fd(fd), m_ip(ip), m_inBuffer(""), m_outBuffer(""), m_markedForDeletion(false) {}
-// m_registered(false), m_hasCorrectPassword(false) 초기화 누락 마찬가지
+Client::Client(int fd, std::string ip) : m_fd(fd), m_ip(ip), m_inBuffer(""), m_outBuffer(""),
+                            m_markedForDeletion(false), m_registered(false), m_hasCorrectPassword(false),
+                            m_nickname(""), m_username(""), m_realname(""), m_hostname(""), m_servername("") {}
 
 Client::Client(const Client& other)
 {
@@ -25,14 +27,13 @@ Client& Client::operator=(const Client& other)
         this->m_outBuffer = other.m_outBuffer;
         this->m_markedForDeletion = other.m_markedForDeletion;
 
-        // 인증 및 정보 필드 복사 추가 해야 함.
-        // this->m_registered = other.m_registered;
-        // this->m_hasCorrectPassword = other.m_hasCorrectPassword;
-        // this->m_nickname = other.m_nickname;
-        // this->m_username = other.m_username;
-        // this->m_realname = other.m_realname;
-        // this->m_hostname = other.m_hostname;
-        // this->m_servername = other.m_servername;
+        this->m_registered = other.m_registered;
+        this->m_hasCorrectPassword = other.m_hasCorrectPassword;
+        this->m_nickname = other.m_nickname;
+        this->m_username = other.m_username;
+        this->m_realname = other.m_realname;
+        this->m_hostname = other.m_hostname;
+        this->m_servername = other.m_servername;
     }
     return *this;
 }
@@ -53,13 +54,15 @@ bool    Client::extractLine(std::string &out)
     std::string::size_type pos = m_inBuffer.find('\n');
     if (pos == std::string::npos)
     {
-        // RFC 2812 2.3: 메시지는 종단 CRLF를 포함해 512바이트를 넘을 수 없다.
-        // 아직 개행이 없는데 누적 버퍼가 이미 초과했다면 그 자체로 위반이다.
         if (m_inBuffer.size() > 512)
             markForDeletion();
         return false;
     }
-
+    if (pos > 512)
+    {
+        markForDeletion();
+        return false;
+    }
     out = m_inBuffer.substr(0, pos);
     m_inBuffer.erase(0, pos + 1);
 
