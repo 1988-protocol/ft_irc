@@ -6,12 +6,10 @@
 class Part : public ICommand
 {
 public:
-    Part(Server* server);
-    Part(const Part& other);
-    Part& operator=(const Part& other);
-    ~Part();
+    Part();
+    virtual ~Part();
 
-    virtual void execute(Client* sender, const std::vector<std::string>& params);
+    virtual void execute(Server& server, Client& client, Message& msg);
 };
 
 #endif

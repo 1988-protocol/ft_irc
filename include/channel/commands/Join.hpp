@@ -6,12 +6,10 @@
 class Join : public ICommand
 {
 public:
-    Join(Server* server);
-    Join(const Join& other);
-    Join& operator=(const Join& other);
-    ~Join();
+    Join();
+    virtual ~Join();
 
-    virtual void execute(Client* sender, const std::vector<std::string>& params);
+    virtual void execute(Server& server, Client& client, Message& msg);
 };
 
 #endif

@@ -1,5 +1,5 @@
-#include "Channel.hpp"
-#include "Client.hpp"
+#include "channel/Channel.hpp"
+#include "client/Client.hpp"
 
 // 생성자: 모든 멤버 변수를 안전하게 초기화
 Channel::Channel(std::string name)
@@ -36,15 +36,9 @@ std::string Channel::getModeString() const
     return (modes == "+") ? "" : modes;
 }
 
-// hpp 선언과 일치하도록 const std::vector<Client*>& 레퍼런스 반환
-const std::vector<Client*>& Channel::getUsers() const
+const std::map<Client*, bool>& Channel::getMembers() const
 {
-    return m_users;
-}
-
-const std::vector<Client*>& Channel::getOperators() const
-{
-    return m_operators;
+    return m_members;
 }
 
 void Channel::setTopic(std::string topic)
@@ -58,44 +52,21 @@ void Channel::addUser(Client* client)
 {
     if (!client)
         return;
-
-    for (sizem_t i = 0; i < m_users.size(); ++i)
-    {
-        if (m_users[i] == client)
-            return; // 이미 참여 중인 경우 중복 추가 방지
-    }
-    m_users.pushm_back(client);
+    if (m_members.find(client) == m_members.end())
+        m_members[client] = false;
 }
 
 void Channel::removeUser(Client* client)
 {
     if (!client)
         return;
-
-    for (sizem_t i = 0; i < m_users.size(); ++i)
-    {
-        if (m_users[i] == client)
-        {
-            m_users.erase(m_users.begin() + i);
-            break;
-        }
-    }
-    // 연쇄 정리: 방장 및 초대 목록에서도 제거
-    removeOperator(client);
-    removeInvite(client);
+    m_members.erase(client); // 유저와 방장 권한이 동시에 삭제됨
+    removeInvite(client); // 초대 목록에서도 삭제
 }
 
 bool Channel::isUserInChannel(Client* client) const
 {
-    if (!client)
-        return false;
-
-    for (sizem_t i = 0; i < m_users.size(); ++i)
-    {
-        if (m_users[i] == client)
-            return true;
-    }
-    return false;
+    return m_members.count(client) > 0;
 }
 
 // --- Key (+k) ---
@@ -136,35 +107,22 @@ bool Channel::isInvited(Client* client) const
 {
     if (!client)
         return false;
-
-    for (sizem_t i = 0; i < m_invitedUsers.size(); ++i)
-    {
-        if (m_invitedUsers[i] == client)
-            return true;
-    }
-    return false;
+    return m_invitedUsers.count(client) > 0;
 }
+
 
 void Channel::addInvite(Client* client)
 {
-    if (!client || isInvited(client))
+    if (!client)
         return;
-    m_invitedUsers.pushm_back(client);
+    m_invitedUsers.insert(client);
 }
 
 void Channel::removeInvite(Client* client)
 {
     if (!client)
         return;
-
-    for (sizem_t i = 0; i < m_invitedUsers.size(); ++i)
-    {
-        if (m_invitedUsers[i] == client)
-        {
-            m_invitedUsers.erase(m_invitedUsers.begin() + i);
-            break;
-        }
-    }
+    m_invitedUsers.erase(client);
 }
 
 // --- Topic Restriction (+t) ---
@@ -203,51 +161,30 @@ void Channel::removeUserLimit()
 
 bool Channel::isFull() const
 {
-    if (!_hasUserLimit) // 인원 제한 모드가 꺼져있으면 정원 초과일 리 없음
+    if (!hasUserLimit()) // 인원 제한 모드가 꺼져있으면 정원 초과일 리 없음
         return false;
         
-    return _users.size() >= static_cast<size_t>(_userLimit);
+    return m_members.size() >= static_cast<size_t>(m_userLimit);
 }
 
 // --- Operator (+o) ---
 
 bool Channel::isOperator(Client* client) const
 {
-    if (!client)
-        return false;
-
-    for (sizem_t i = 0; i < m_operators.size(); ++i)
-    {
-        if (m_operators[i] == client)
-            return true;
-    }
+    std::map<Client*, bool>::const_iterator it = m_members.find(client);
+    if (it != m_members.end())
+        return it->second; // true/false 반환
     return false;
 }
 
 void Channel::addOperator(Client* client)
 {
-    if (!client)
-        return;
-
-    for (sizem_t i = 0; i < m_operators.size(); ++i)
-    {
-        if (m_operators[i] == client)
-            return;
-    }
-    m_operators.pushm_back(client);
+    if (isUserInChannel(client))
+        m_members[client] = true;
 }
 
 void Channel::removeOperator(Client* client)
 {
-    if (!client)
-        return;
-
-    for (sizem_t i = 0; i < m_operators.size(); ++i)
-    {
-        if (m_operators[i] == client)
-        {
-            m_operators.erase(m_operators.begin() + i);
-            break;
-        }
-    }
+    if (isUserInChannel(client))
+        m_members[client] = false;
 }

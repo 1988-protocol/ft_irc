@@ -6,12 +6,10 @@
 class Privmsg : public ICommand
 {
 public:
-    Privmsg(Server* server);
-    Privmsg(const Privmsg& other);
-    Privmsg& operator=(const Privmsg& other);
-    ~Privmsg();
+    Privmsg();
+    virtual ~Privmsg();
 
-    virtual void execute(Client* sender, const std::vector<std::string>& params);
+    virtual void execute(Server& server, Client& client, Message& msg);
 };
 
 #endif

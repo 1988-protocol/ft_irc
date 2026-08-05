@@ -1,83 +1,83 @@
-#include "Topic.hpp"
-#include "Server.hpp"
-#include "Channel.hpp"
-#include "Client.hpp"
+#include "channel/commands/Topic.hpp"
+#include "channel/Channel.hpp"
+#include "server/Server.hpp"
+#include "client/Client.hpp"
+#include "parser/Message.hpp"
+#include "common/Utils.hpp"
+#include "common/Replies.hpp"
 
-Topic::Topic(Server* server) : ICommand(server) {}
-
-Topic::Topic(const Topic& other) : ICommand(other) {}
-
-Topic& Topic::operator=(const Topic& other)
-{
-    if (this != &other)
-    {
-        ICommand::operator=(other);
-    }
-    return *this;
-}
+Topic::Topic() : ICommand() {}
 
 Topic::~Topic() {}
 
-void Topic::execute(Client* sender, const std::vector<std::string>& params)
+void Topic::execute(Server& server, Client& client, Message& msg)
 {
-    if (!sender)
-        return;
+    const std::vector<std::string>& params = msg.getParams();
+    std::string target = client.getNickname();
 
-    // 1. 인자 개수 검사 (461 ERRm_NEEDMOREPARAMS)
+    // 모든 명령어 공통 params 인자 개수 검사
     if (params.empty())
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 461 " + sender->getNickname() + " TOPIC :Not enough parameters\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "TOPIC :Not enough parameters"));
         return;
     }
 
+    // 명령어: TOPIC / 파라미터: <channel> [<topic>] (두 번째 인자인 topic은 생략 가능)
     std::string channelName = params[0];
 
-    // 2. 채널 존재 여부 확인 (403 ERRm_NOSUCHCHANNEL)
-    Channel* channel = m_server->getChannel(channelName);
+    // 모든 명령어 공통 채널 존재 여부 확인
+    Channel* channel = server.getChannel(channelName);
     if (!channel)
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 403 " + sender->getNickname() + " " + channelName + " :No such channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHCHANNEL, target, channelName + " :No such channel"));
         return;
     }
 
-    // 3. 요청 유저가 채널 멤버인지 확인 (442 ERRm_NOTONCHANNEL)
-    if (!channel->isUserInChannel(sender))
+    // 3. 요청 유저가 채널 멤버인지 확인
+    if (!channel->isUserInChannel(&client))
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 442 " + sender->getNickname() + " " + channelName + " :You're not on that channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
         return;
     }
 
     // 4. [단순 조회 요청] 인자가 채널명 1개일 때
-    if (params.size() == 1)
+    if (params.size() == 1 && !msg.hasTrailing())
     {
         if (channel->getTopic().empty())
         {
-            m_server->sendToClient(sender->getFd(), ":ftm_irc 331 " + sender->getNickname() + " " + channelName + " :No topic is set\r\n");
+            client.appendToOutBuffer(reply(Numeric::RPL_NOTOPIC, target, channelName + " :No topic is set"));
         }
         else
         {
-            m_server->sendToClient(sender->getFd(), ":ftm_irc 332 " + sender->getNickname() + " " + channelName + " :" + channel->getTopic() + "\r\n");
+            client.appendToOutBuffer(reply(Numeric::RPL_TOPIC, target, channelName + " :" + channel->getTopic()));
         }
         return;
     }
 
-    // 5. [토픽 변경 요청] +t 모드 권한 검사 (482 ERRm_CHANOPRIVSNEEDED)
-    if (channel->isTopicOpOnly() && !channel->isOperator(sender))
+    // 5. [토픽 변경 요청] +t 모드 권한 검사
+    if (channel->isTopicOpOnly() && !channel->isOperator(&client))
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 482 " + sender->getNickname() + " " + channelName + " :You're not channel operator\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, target, channelName + " :You're not channel operator"));
         return;
     }
 
     // 6. 토픽 변경 및 브로드캐스트
-    std::string newTopic = params[1];
+    std::string newTopic = "";
+    if (msg.hasTrailing())
+        newTopic = msg.getTrailing();
+    else if (params.size() >= 2)
+        newTopic = params[1];
+    else
+        return;
+
     channel->setTopic(newTopic);
 
-    std::string topicMessage = ":" + sender->getNickname() + "!" + sender->getUsername() + "@" + sender->getHostname()
+    std::string topicMessage = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
                              + " TOPIC " + channelName + " :" + newTopic + "\r\n";
 
-    const std::vector<Client*>& users = channel->getUsers();
-    for (sizem_t i = 0; i < users.size(); ++i)
+    const std::map<Client*, bool>& members = channel->getMembers();
+    for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
     {
-        m_server->sendToClient(users[i]->getFd(), topicMessage);
+        it->first->appendToOutBuffer(topicMessage);
     }
 }

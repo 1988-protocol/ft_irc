@@ -6,12 +6,10 @@
 class Topic : public ICommand
 {
 public:
-    Topic(Server* server);
-    Topic(const Topic& other);
-    Topic& operator=(const Topic& other);
+    Topic();
     virtual ~Topic();
 
-    virtual void execute(Client* sender, const std::vector<std::string>& params);
+    virtual void execute(Server& server, Client& client, Message& msg);
 };
 
 #endif

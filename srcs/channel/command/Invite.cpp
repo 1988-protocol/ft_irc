@@ -1,82 +1,87 @@
-#include "Invite.hpp"
-#include "Server.hpp"
-#include "Channel.hpp"
-#include "Client.hpp"
+#include "channel/commands/Invite.hpp"
+#include "channel/Channel.hpp"
+#include "server/Server.hpp"
+#include "client/Client.hpp"
+#include "parser/Message.hpp"
+#include "common/Utils.hpp"
+#include "common/Replies.hpp"
 
-Invite::Invite(Server* server) : ICommand(server) {}
-
-Invite::Invite(const Invite& other) : ICommand(other) {}
-
-Invite& Invite::operator=(const Invite& other)
-{
-    if (this != &other)
-    {
-        ICommand::operator=(other);
-    }
-    return *this;
-}
+Invite::Invite() : ICommand() {}
 
 Invite::~Invite() {}
 
-void Invite::execute(Client* sender, const std::vector<std::string>& params)
+void Invite::execute(Server& server, Client& client, Message& msg)
 {
-    if (!sender)
-        return;
+    const std::vector<std::string>& params = msg.getParams();
+    std::string clientNick = client.getNickname();
 
-    // 1. 인자 개수 검사 (461 ERRm_NEEDMOREPARAMS)
-    if (params.size() < 2)
+    // 1. params의 인자 개수 검사
+    if (params.empty())
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 461 " + sender->getNickname() + " INVITE :Not enough parameters\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, clientNick, "INVITE :Not enough parameters"));
         return;
     }
 
+    // 명령어 : INVITE / 파라미터: <nickname> <channel> (초대할 유저의 닉네임과 대상 채널 이름)
+    // 인자갯수에 문제 없으면 params의 가장 첫번째 인자가 초대하고자 하는 User의 nickname
     std::string targetNick = params[0];
-    std::string channelName = params[1];
+    // 채널이름은 params의 두번째 인자로 올 수도 있고,
+    std::string channelName = "";
+    if (params.size() >= 2)
+        channelName = params[1];
+    // trailing 인자로 들어올 수도 있음
+    else if (msg.hasTrailing())
+        channelName = msg.getTrailing();
+    // 들어온 채널이름 값이 없으면 에러메시지 전송
+    if (channelName.empty())
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, clientNick, "INVITE :Not enough parameters"));
+        return;
+    }
 
-    // 2. 채널 존재 여부 검사 (403 ERRm_NOSUCHCHANNEL)
-    Channel* channel = m_server->getChannel(channelName);
+    // 2. 채널 존재 여부 검사
+    Channel* channel = server.getChannel(channelName);
     if (!channel)
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 403 " + sender->getNickname() + " " + channelName + " :No such channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHCHANNEL, clientNick, channelName + " :No such channel"));
         return;
     }
 
-    // 3. 초대한 사람이 해당 채널 멤버인지 검사 (442 ERRm_NOTONCHANNEL)
-    if (!channel->isUserInChannel(sender))
+    // 3. 초대한 주체(명령어를 실행한 client)가 해당 채널 멤버인지 검사
+    if (!channel->isUserInChannel(&client))
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 442 " + sender->getNickname() + " " + channelName + " :You're not on that channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, clientNick, channelName + " :You're not on that channel"));
         return;
     }
 
-    // 4. +i (초대 전용 모드) 일 때는 방장만 초대 가능 (482 ERRm_CHANOPRIVSNEEDED)
-    if (channel->isInviteOnly() && !channel->isOperator(sender))
+    // 4. +i (초대 전용 모드) 일 때는 방장만 초대 가능
+    if (channel->isInviteOnly() && !channel->isOperator(&client))
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 482 " + sender->getNickname() + " " + channelName + " :You're not channel operator\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, clientNick, channelName + " :You're not channel operator"));
         return;
     }
 
-    // 5. 초대 대상 유저 존재 여부 검사 (401 ERRm_NOSUCHNICK)
-    Client* target = m_server->getClientByNick(targetNick);
-    if (!target)
+    // 5. 초대 당할 대상 유저 존재 여부 검사
+    Client* targetClient = server.getClientByNick(targetNick);
+    if (!targetClient)
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 401 " + sender->getNickname() + " " + targetNick + " :No such nick/channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHNICK, clientNick, targetNick + " :No such nick/channel"));
         return;
     }
 
-    // 6. 초대 대상 유저가 이미 채널에 있는지 검사 (443 ERRm_USERONCHANNEL)
-    if (channel->isUserInChannel(target))
+    // 6. 초대 대상 유저가 이미 채널에 있는지 검사
+    if (channel->isUserInChannel(targetClient))
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 443 " + sender->getNickname() + " " + targetNick + " " + channelName + " :is already on channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_USERONCHANNEL, clientNick, targetNick + " " + channelName + " :is already on channel"));
         return;
     }
 
-    // 7. 🌟 채널 초대 목록에 Client 포인터 객체 추가
-    channel->addInvite(target);
+    // 7. 채널 초대 목록에 Client 포인터 객체 추가
+    channel->addInvite(targetClient);
 
-    // 8. 보낸 사람에게 성공 응답(341 RPLm_INVITING)전송
-    m_server->sendToClient(sender->getFd(), ":ftm_irc 341 " + sender->getNickname() + " " + targetNick + " " + channelName + "\r\n");
+    // 8. 보낸 사람에게 성공 응답 전송
+    client.appendToOutBuffer(reply(Numeric::RPL_INVITING, clientNick, targetNick + " " + channelName));
 
     // 9. 초대받는 타겟 유저에게 INVITE 알림 전송
-    m_server->sendToClient(target->getFd(), ":" + sender->getNickname() + "!" + sender->getUsername() + "@" + sender->getHostname() 
-                                         + " INVITE " + targetNick + " :" + channelName + "\r\n");
+    targetClient->appendToOutBuffer(":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname() + " INVITE " + targetNick + " :" + channelName + "\r\n");
 }

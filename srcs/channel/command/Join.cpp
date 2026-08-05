@@ -1,140 +1,129 @@
-#include "Join.hpp"
-#include "Server.hpp"
-#include "Channel.hpp"
-#include "Client.hpp"
-#include "Message.hpp"
+#include "channel/commands/Join.hpp"
+#include "channel/Channel.hpp"
+#include "server/Server.hpp"
+#include "client/Client.hpp"
+#include "parser/Message.hpp"
+#include "common/Utils.hpp"
+#include "common/Replies.hpp"
 
-Join::Join(Server* server) : ICommand(server) {}
-
-Join::Join(const Join& other) : ICommand(other) {}
-
-Join& Join::operator=(const Join& other)
-{
-    if (this != &other)
-    {
-        ICommand::operator=(other); // 베이스 클래스 명칭 통일
-    }
-    return *this;
-}
+Join::Join() : ICommand() {}
 
 Join::~Join() {}
 
-void Join::execute(Server* server, Client* client, Massage* msg)
+void Join::execute(Server& server, Client& client, Message& msg)
 {
-    if (!client)
-        return;
+    const std::vector<std::string>& params = msg.getParams();
+    std::string target = client.getNickname();
 
-    // 인자 개수 검사 (461)
+    // 1. params의 인자 개수 검사
     if (params.empty())
     {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 461 " + client->getNickname() + " JOIN :Not enough parameters\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "JOIN :Not enough parameters"));
         return;
     }
-
-    //channelName에 msg에서 getterMsg함수로 파라미터 값 가져오기
-    std::string channelName = msg.params[0];
-    std::string inputKey = "";
+    //','기준으로 다중 채널 분리해서 channelName vector 생성
+    std::vector<std::string> channelNames = Utils::split(params[0], ',');
+    std::vector<std::string> keys;
+    //파라미터가 2개 이상이면 두번째 인자부터 키값,키 값도 ','기준으로 분리
     if (params.size() >= 2)
+        keys = Utils::split(params[1], ',');
+    for (size_t i = 0; i < channelNames.size(); i++)
     {
-        inputKey = params[1];
-    }
+        std::string channelName = channelNames[i];
+        std::string inputKey = "";
+        if (keys.size() > i)
+            inputKey = keys[i];
 
-    // 채널 이름 유효성 검사 (403)
-    // 채널 이름 비어있거나 맨 첫 글자가 #이 나리면 403에러
-    if (channelName.empty() || channelName[0] != '#')
-    {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 403 " + client->getNickname() + " " + channelName + " :No such channel\r\n");
-        return;
-    }
-
-    // 채널 존재 여부 확인 및 생성/검사
-    // 현재는 Server에서 Channel getter, setter, add, remove 함수 있다고 가정
-    Channel* channel = m_server->getChannel(channelName);
-    if (!channel)
-    {
-        // 처음 생성될 때는 채널 객체 생성 후 유저 추가 및 방장 지정
-        channel = new Channel(channelName);
-        m_server->addChannel(channelName, channel);
-        channel->addUser(client);
-        channel->addOperator(client);
-    }
-    else
-    {
-        // 이미 참가 중인 유저는 중복 진입 방지
-        if (channel->isUserInChannel(client))
-            return;
-
-        // +i 모드 (초대 전용) 검사
-        //채널 모드가 invite 이면서, 클라이언트가 invite 되지 않은 상태이면 473 에러 송신
-        if (channel->isInviteOnly() && !channel->isInvited(client))
+        // 채널 이름 유효성 검사
+        // 채널 이름 비어있거나 맨 첫 글자가 #이 나리면 403에러
+        if (channelName.empty() || channelName[0] != '#')
         {
-            m_server->sendToClient(client->getFd(), ":ftm_irc 473 " + client->getNickname() + " " + channelName + " :Cannot join channel (+i)\r\n");
-            return;
+            client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHCHANNEL, target, channelName + " :No such channel"));
+            continue;
         }
 
-        // +k 모드 (비밀번호) 검사
-        // 비밀번호 안 맞으면 475 에러 송신
-        if (channel->isKeyModeActive())
+        // 채널 존재 여부 확인 및 생성/검사
+        // 현재는 Server에서 Channel getter, setter, add, remove 함수 있다고 가정
+        Channel* channel = server.getChannel(channelName);
+        if (!channel)
         {
-            if (!channel->checkKey(inputKey))
+            // 처음 생성될 때는 채널 객체 생성 후 유저 추가 및 방장 지정
+            channel = new Channel(channelName);
+            server.addChannel(channelName, channel);
+            channel->addUser(&client);
+            channel->addOperator(&client);
+        }
+        else
+        {
+            // 이미 참가 중인 유저는 중복 진입 방지
+            if (channel->isUserInChannel(&client))
+                continue;
+
+            // +i 모드 (초대 전용) 검사
+            //채널 모드가 invite 이면서, 클라이언트가 invite 되지 않은 상태 확인
+            if (channel->isInviteOnly() && !channel->isInvited(&client))
             {
-                m_server->sendToClient(client->getFd(), ":ftm_irc 475 " + client->getNickname() + " " + channelName + " :Cannot join channel (+k)\r\n");
-                return;
+                client.appendToOutBuffer(reply(Numeric::ERR_INVITEONLYCHAN, target, channelName + " :Cannot join channel (+i)"));
+                continue;
             }
+
+            // +k 모드 (비밀번호) 검사
+            if (channel->isKeyModeActive() && !channel->checkKey(inputKey))
+            {
+                client.appendToOutBuffer(reply(Numeric::ERR_BADCHANNELKEY, target, channelName + " :Cannot join channel (+k)"));
+                continue;
+            }
+
+            // +l 모드 (인원 제한) 검사
+            if (channel->isFull())
+            {
+                client.appendToOutBuffer(reply(Numeric::ERR_CHANNELISFULL, target, channelName + " :Cannot join channel (+l)"));
+                continue;
+            }
+
+            // 최종 유저 추가
+            channel->addUser(&client);
         }
 
-        // +l 모드 (인원 제한) 검사
-        if (channel->isFull())
-        {
-            _server->sendToClient(sender->getFd(), ":ft_irc 471 " + sender->getNickname() + " " + channelName + " :Cannot join channel (+l)\r\n");
-            return;
-        }
+        // 4. 초대받아서 들어온 유저라면 초대여부 사용
+        if (channel->isInvited(&client))
+            channel->removeInvite(&client);
 
-        // 최종 유저 추가
-        channel->addUser(client);
-    }
-
-    // 4. 초대받아서 들어온 유저라면 초대여부 사용
-    if (channel->isInvited(client))
-        channel->removeInvite(client);
-
-    // 5. 입장 알림 브로드캐스트 (새 유저 포함 채널 내 모든 사람에게 전송)
-    std::string joinMessage = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname()
-                            + " JOIN :" + channelName + "\r\n";
+        // 5. 입장 알림 브로드캐스트 (새 유저 포함 채널 내 모든 사람에게 전송)
+        std::string joinMessage = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
+                                + " JOIN :" + channelName + "\r\n";
     
-    const std::vector<Client*>& users = channel->getUsers();
-    for (sizem_t i = 0; i < users.size(); ++i)
-    {
-        m_server->sendToClient(users[i]->getFd(), joinMessage);
+        const std::map<Client*, bool>& members = channel->getMembers();
+        for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
+        {
+            it->first->appendToOutBuffer(joinMessage); // it->first 객체 자신의 버퍼에 메시지 추가
+        }
+
+        // 6. 입장한 유저(client)에게 Topic 전송
+        // Topic 전송
+        if (channel->getTopic().empty())
+        {
+            client.appendToOutBuffer(reply(Numeric::RPL_NOTOPIC, target, channelName + " :No topic is set"));
+        }
+        else
+        {
+            client.appendToOutBuffer(reply(Numeric::RPL_TOPIC, target, channelName + " :" + channel->getTopic()));
+        }
+
+        //입장한 유저에게 유저목록 전송
+        std::string userList = "";
+        for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
+        {
+            if (!userList.empty())
+                userList += " ";
+            if (channel->isOperator(it->first))
+                userList += "@";
+            userList += it->first->getNickname();
+        }
+        client.appendToOutBuffer(reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + userList));
+
+        // 366 RPL_ENDOFNAMES
+        client.appendToOutBuffer(reply(Numeric::RPL_ENDOFNAMES, target, channelName + " :End of /NAMES list."));
     }
 
-    // 입장한 유저(client)에게 Topic 전송
-
-    // Topic 전송
-    if (channel->getTopic().empty())
-    {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 331 " + client->getNickname() + " " + channelName + " :No topic is set\r\n");
-    }
-    else
-    {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 332 " + client->getNickname() + " " + channelName + " :" + channel->getTopic() + "\r\n");
-    }
-
-    // 입장한 유저에게 유저목록 전송
-    // 353 RPLm_NAMREPLY
-    /*std::string userList = "";
-    for (std::vector<Client*>::constm_iterator it = users.begin(); it != users.end(); ++it)
-    {
-        if (!userList.empty())
-            userList += " ";
-        if (channel->isOperator(*it))
-            userList += "@";
-        userList += (*it)->getNickname();
-    }
-
-    m_server->sendToClient(client->getFd(), ":ftm_irc 353 " + client->getNickname() + " = " + channelName + " :" + userList + "\r\n");
-
-    // 366 RPLm_ENDOFNAMES
-    m_server->sendToClient(client->getFd(), ":ftm_irc 366 " + client->getNickname() + " " + channelName + " :End of /NAMES list.\r\n");
-*/
 }

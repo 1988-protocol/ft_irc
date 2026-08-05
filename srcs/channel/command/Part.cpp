@@ -1,75 +1,77 @@
-#include "Part.hpp"
-#include "Server.hpp"
-#include "Channel.hpp"
-#include "Client.hpp"
+#include "channel/commands/Part.hpp"
+#include "channel/Channel.hpp"
+#include "server/Server.hpp"
+#include "client/Client.hpp"
+#include "parser/Message.hpp"
+#include "common/Utils.hpp"
+#include "common/Replies.hpp"
 
-Part::Part(Server* server) : ICommand(server) {}
-
-Part::Part(const Part& other) : ICommand(other) {}
-
-Part& Part::operator=(const Part& other)
-{
-    if (this != &other)
-    {
-        ICommand::operator=(other);
-    }
-    return *this;
-}
+Part::Part() : ICommand() {}
 
 Part::~Part() {}
 
-void Part::execute(Client* sender, const std::vector<std::string>& params)
+void Part::execute(Server& server, Client& client, Message& msg)
 {
-    if (!sender)
-        return;
+    const std::vector<std::string>& params = msg.getParams();
+    std::string target = client.getNickname();
 
-    // 1. 인자 개수 검사 (461 ERRm_NEEDMOREPARAMS)
+    // 1. 인자 개수 검사
     if (params.empty())
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 461 " + sender->getNickname() + " PART :Not enough parameters\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "PART :Not enough parameters"));
         return;
     }
 
-    std::string channelName = params[0];
-
-    // 2. 채널 존재 여부 확인 (403 ERRm_NOSUCHCHANNEL)
-    Channel* channel = m_server->getChannel(channelName);
-    if (!channel)
+    // 명령어: PART / 파라미터: <channel>{,<channel>}
+    std::vector<std::string> channelNames = Utils::split(params[0], ',');
+    for (size_t i = 0; i < channelNames.size(); i++)
     {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 403 " + sender->getNickname() + " " + channelName + " :No such channel\r\n");
-        return;
-    }
+        std::string channelName = channelNames[i];
+        
 
-    // 3. 유저가 채널 멤버인지 확인 (442 ERRm_NOTONCHANNEL)
-    if (!channel->isUserInChannel(sender))
-    {
-        m_server->sendToClient(sender->getFd(), ":ftm_irc 442 " + sender->getNickname() + " " + channelName + " :You're not on that channel\r\n");
-        return;
-    }
+        // 2. 채널 존재 여부 확인
+        Channel* channel = server.getChannel(channelName);
+        if (!channel)
+        {
+            client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHCHANNEL, target, channelName + " :No such channel"));
+            continue;
+        }
 
-    // 4. 퇴장 메시지(Reason) 조립
-    std::string partReason = "";
-    if (params.size() >= 2)
-    {
-        partReason = " :" + params[1];
-    }
+        // 3. 유저가 채널 멤버인지 확인
+        if (!channel->isUserInChannel(&client))
+        {
+            client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
+            continue;
+        }
 
-    // 5. PART 메시지 브로드캐스트 (나가는 유저 포함 전원에게 전송)
-    std::string partMessage = ":" + sender->getNickname() + "!" + sender->getUsername() + "@" + sender->getHostname()
-                            + " PART " + channelName + partReason + "\r\n";
+        // 4. 퇴장 메시지(Reason) 조립
+        std::string reason = "";
+        if (msg.hasTrailing())
+            reason = msg.getTrailing();
+        else if (params.size() >= 2)
+            reason = params[1];
 
-    const std::vector<Client*>& users = channel->getUsers();
-    for (sizem_t i = 0; i < users.size(); ++i)
-    {
-        m_server->sendToClient(users[i]->getFd(), partMessage);
-    }
+        // 5. PART 메시지 브로드캐스트 (나가는 유저 포함 전원에게 전송)
+        std::string partMessage = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
+                                + " PART " + channelName;
+        if (!reason.empty())
+            partMessage += " :" + reason;
+        partMessage += "\r\n";
 
-    // 6. 채널 유저 및 방장/초대 목록 연쇄 제거 (removeUser 내부에서 연쇄 처리됨)
-    channel->removeUser(sender);
+        const std::map<Client*, bool>& members = channel->getMembers();
+        for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
+        {
+            it->first->appendToOutBuffer(partMessage);
+        }
 
-    // 7. 빈 방 삭제 처리
-    if (channel->getUsers().empty())
-    {
-        m_server->removeChannel(channelName);
+        // 6. 채널 유저 및 방장/초대 목록 연쇄 제거 (removeUser 내부에서 연쇄 처리됨)
+        channel->removeUser(&client);
+
+        // 7. 빈 방 삭제 처리
+        if (channel->getMembers().empty())
+        {
+            server.removeChannel(channelName);
+            delete channel;
+        }
     }
 }

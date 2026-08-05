@@ -6,12 +6,10 @@
 class Kick : public ICommand
 {
 public:
-    Kick(Server* server);
-    Kick(const Kick& other);
-    Kick& operator=(const Kick& other);
-    ~Kick();
+    Kick();
+    virtual ~Kick();
 
-    virtual void execute(Client* sender, const std::vector<std::string>& params);
+    virtual void execute(Server& server, Client& client, Message& msg);
 };
 
 #endif

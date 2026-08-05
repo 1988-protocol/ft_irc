@@ -1,8 +1,9 @@
-#ifndef CHANNELm_HPP
-# define CHANNELm_HPP
+#ifndef CHANNEL_HPP
+# define CHANNEL_HPP
 
 #include <string>
-#include <vector>
+#include <map>
+#include <set>
 
 class Client;
 
@@ -16,9 +17,8 @@ private:
     bool        m_isTopicOp;  // 방장만 토픽 변경 가능 여부 (+t)
     int         m_userLimit;  // 인원 제한 (+l, 0이면 제한 없음)
 
-    std::vector<Client *> m_users;        // 참여자 목록
-    std::vector<Client *> m_operators;    // 운영자 목록 (+o)
-    std::vector<Client *> m_invitedUsers; // 초대받은 유저 목록 (+i)
+    std::map<Client*, bool> m_members;  // 참여자 목록, 일반유저인지 방장인지 value값으로 확인
+    std::set<Client*> m_invitedUsers; // 초대받은 유저 목록 (+i)
 
 public:
     Channel(std::string name);
@@ -28,12 +28,12 @@ public:
     std::string getTopic() const;
     std::string getKey() const;
     std::string getModeString() const; // 현재 모드 상태 문자열 반환 (예: "+itk")
-    const std::vector<Client *> getUsers() const;
-    const std::vector<Client *> getOperators() const;
+    const std::map<Client *, bool>& getMembers() const;
 
     void setTopic(std::string topic);
     void addUser(Client *client);
     void removeUser(Client *client);
+    bool isUserInChannel(Client* client) const;
 
     // Key (+k) 관련
     bool isKeyModeActive() const;

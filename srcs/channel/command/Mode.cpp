@@ -1,63 +1,60 @@
-#include "Mode.hpp"
-#include "Server.hpp"
-#include "Channel.hpp"
-#include "Client.hpp"
+#include "channel/commands/Mode.hpp"
+#include "channel/Channel.hpp"
+#include "server/Server.hpp"
+#include "client/Client.hpp"
+#include "parser/Message.hpp"
+#include "common/Utils.hpp"
+#include "common/Replies.hpp"
 #include <cstdlib>
 
-Mode::Mode(Server* server) : ICommand(server) {}
-
-Mode::Mode(const Mode& other) : ICommand(other) {}
-
-Mode& Mode::operator=(const Mode& other) {
-    if (this != &other) ICommand::operator=(other);
-    return *this;
-}
+Mode::Mode() : ICommand() {}
 
 Mode::~Mode() {}
 
-void Mode::execute(Server* server, Client* client, Massage* msg)
+void Mode::execute(Server& server, Client& client, Message& msg)
 {
-    if (!server || !client) 
-        return;
-
-    // 인자 개수 검사 (461)
-    if (msg.params.empty()) 
+    const std::vector<std::string>& params = msg.getParams();
+    std::string target = client.getNickname();
+    
+    // 인자 개수 검사
+    if (params.empty())
     {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 461 " + client->getNickname() + " MODE :Not enough parameters\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
         return;
     }
 
-    std::string target = msg.params[0];
+    // 명령어: MODE / 파라미터: <channel> {[+|-]|o|p|s|i|t|n|b|v} [<limit>] [<user(닉네임)>] [<ban mask>]
+    std::string channelName = params[0];
 
     // 파라미터 없거나 채널명이 아닐 경우 리턴
-    if (target.empty() || target[0] != '#')
+    if (channelName.empty() || channelName[0] != '#')
         return;
 
-    // 채널 존재 여부 확인 (403)
-    Channel* channel = m_server->getChannel(target);
+    // 채널 존재 여부 확인
+    Channel* channel = server.getChannel(channelName);
     if (!channel) {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 403 " + client->getNickname() + " " + target + " :No such channel\r\n");
+        client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHCHANNEL, target, channelName + " :No such channel"));
         return;
     }
 
-    // 인자가 채널명 하나만 들어온 경우: 단순 모드 상태 조회 (324)
+    // 인자가 채널명 하나만 들어온 경우: 단순 모드 상태 조회
     if (params.size() == 1) {
         std::string modeStr = channel->getModeString();
         if (modeStr.empty())
             modeStr = "+";
-        m_server->sendToClient(client->getFd(), ":ftm_irc 324 " + client->getNickname() + " " + target + " " + modeStr + "\r\n");
+        client.appendToOutBuffer(reply(Numeric::RPL_CHANNELMODEIS, target, channelName + " :" + modeStr));
         return;
     }
 
-    // 명령 요청 유저가 채널 멤버인지 확인 (442)
-    if (!channel->isUserInChannel(client)) {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 442 " + client->getNickname() + " " + target + " :You're not on that channel\r\n");
+    // 명령 요청 유저가 채널 멤버인지 확인
+    if (!channel->isUserInChannel(&client)) {
+        client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
         return;
     }
 
-    // 모드 변경 시도 시 방장(Operator) 권한 확인 (482)
-    if (!channel->isOperator(client)) {
-        m_server->sendToClient(client->getFd(), ":ftm_irc 482 " + client->getNickname() + " " + target + " :You're not channel operator\r\n");
+    // 모드 변경 시도 시 방장(Operator) 권한 확인
+    if (!channel->isOperator(&client)) {
+        client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, target, channelName + " :You're not channel operator"));
         return;
     }
 
@@ -82,12 +79,12 @@ void Mode::execute(Server* server, Client* client, Massage* msg)
             channel->setTopicOpOnly(isAdding);
             break;
 
-        case 'k': // Key
+        case 'k': // Key (+k password / -k)
             {
                 if (isAdding)
                 {
                     if (params.size() <= paramIdx) {
-                        m_server->sendToClient(client->getFd(), ":ftm_irc 461 " + client->getNickname() + " MODE :Not enough parameters\r\n");
+                        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
                         return;
                     }
                     std::string keyArg = params[paramIdx++];
@@ -99,12 +96,12 @@ void Mode::execute(Server* server, Client* client, Massage* msg)
             }
             break;
 
-        case 'l': // User Limit
+        case 'l': // User Limit (+l 10 / -l)
             {
                 if (isAdding)
                 {
                     if (params.size() <= paramIdx) {
-                        m_server->sendToClient(client->getFd(), ":ftm_irc 461 " + client->getNickname() + " MODE :Not enough parameters\r\n");
+                        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
                         return;
                     }
                     // 리밋 숫자 변환
@@ -112,30 +109,30 @@ void Mode::execute(Server* server, Client* client, Massage* msg)
                     if (limit <= 0) // 무효한 값이면 리턴
                         return;
                     channel->setUserLimit(limit);
-                    appliedArg = " " + params[paramIdx];
+                    appliedArg = " " + params[paramIdx++];
                 } else {
                     channel->removeUserLimit();
                 }
             }
             break;
 
-        case 'o': // Operator 권한 부여/박탈
+        case 'o': // Operator 권한 부여/박탈 (+o target / -o target)
             {
                 if (params.size() <= paramIdx)
                 {
-                    m_server->sendToClient(client->getFd(), ":ftm_irc 461 " + client->getNickname() + " MODE :Not enough parameters\r\n");
+                    client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
                     return;
                 }
                 std::string targetNick = params[paramIdx++];
-                Client* targetClient = m_server->getClientByNick(targetNick);
+                Client* targetClient = server.getClientByNick(targetNick);
                 
                 if (!targetClient || !channel->isUserInChannel(targetClient))
                 {
-                    m_server->sendToClient(client->getFd(), ":ftm_irc 441 " + client->getNickname() + " " + targetNick + " " + target + " :They aren't on that channel\r\n");
+                    client.appendToOutBuffer(reply(Numeric::ERR_USERNOTINCHANNEL, target, targetNick + " " + channelName + " :They aren't on that channel"));
                     return;
                 }
 
-                if (isAdding) channel->addOperator(targetClient);
+                if (isAdding) channel->addOperator(targetClient); //chanel에 
                 else channel->removeOperator(targetClient);
                 
                 appliedArg = " " + targetNick;
@@ -143,17 +140,18 @@ void Mode::execute(Server* server, Client* client, Massage* msg)
             break;
 
         default:
-            // 알 수 없는 모드 (472)
-            m_server->sendToClient(client->getFd(), ":ftm_irc 472 " + client->getNickname() + " " + modeFlag + " :is unknown mode char to me\r\n");
+            // 알 수 없는 모드
+            client.appendToOutBuffer(reply(Numeric::ERR_UNKNOWNMODE, target, std::string(1, modeFlag)+ " :is unknown mode char to me"));
             return;
     }
 
     // 7. 모드 변경 성공 시 추가 인자까지 포함하여 채널 내 전체 브로드캐스트
-    std::string modeNotice = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname()
-                           + " MODE " + target + " " + modeStr + appliedArg + "\r\n";
+    std::string modeNotice = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
+                           + " MODE " + channelName + " " + modeStr + appliedArg + "\r\n";
 
-    const std::vector<Client*>& users = channel->getUsers();
-    for (sizem_t i = 0; i < users.size(); ++i) {
-        m_server->sendToClient(users[i]->getFd(), modeNotice);
+    const std::map<Client*, bool>& members = channel->getMembers();
+    for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it) 
+    {
+        it->first->appendToOutBuffer(modeNotice);
     }
 }
