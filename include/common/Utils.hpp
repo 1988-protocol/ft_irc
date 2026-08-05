@@ -35,6 +35,15 @@ namespace Utils
 
     // ASCII 알파벳만 대문자로 변환한다(커맨드명 대소문자 무시 비교용).
     std::string toUpper(const std::string& s);
+
+    // RFC1459 IRC 대소문자 변환 ('A'-'Z' -> 'a'-'z', '[' -> '{', ']' -> '}', '\' -> '|', '~' -> '^')
+    char toIRCLower(char c);
+
+    // RFC1459 규격에 따라 두 닉네임이 동등한지 비교한다 (대소문자 및 IRC 특수문자 동등 취급).
+    bool isSameNickname(const std::string& n1, const std::string& n2);
+
+    // RFC1459 규격에 따른 닉네임 유효성 검사.
+    bool isValidNickname(const std::string& nickname);
 }
 
 #endif

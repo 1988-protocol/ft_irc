@@ -43,6 +43,8 @@ std::string reply(int code, const std::string& target, const std::string& msg)
 }
 
 // 명명된 네임스페이스
+// 7.5  Nick의 헬퍼함수를 Util로 옮겼습니다.
+// nick 검증은 코드 전체적으로 사용되어야 해서요.
 namespace Utils
 {
     std::vector<std::string> split(const std::string& s, char delim)
@@ -84,5 +86,53 @@ namespace Utils
         // std::transform과 안전한 인라인 함수 safeToUpper를 사용하여 대문자로 변환합니다.
         std::transform(result.begin(), result.end(), result.begin(), safeToUpper);
         return result;
+    }
+
+    char toIRCLower(char c) // 주어진 문자를 IRC 프로토콜 규격에 맞춘 소문자로 변환.
+    {
+        if (c >= 'A' && c <= 'Z')
+            return static_cast<char>(c + ('a' - 'A'));
+        if (c == '[') return '{';
+        if (c == ']') return '}';
+        if (c == '\\') return '|';
+        if (c == '~') return '^';
+        return c;
+    }
+
+    bool isSameNickname(const std::string& n1, const std::string& n2)
+    {
+        if (n1.size() != n2.size())
+            return false;
+        for (std::string::size_type i = 0; i < n1.size(); ++i)
+        {
+            if (toIRCLower(n1[i]) != toIRCLower(n2[i]))
+                return false;
+        }
+        return true;
+    }
+
+    namespace
+    {
+        bool isValidNicknameChar(char c, bool isFirst)
+        {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+                return true;
+            if (!isFirst && c >= '0' && c <= '9')
+                return true;
+            static const std::string specials = "-[]\\`^{}";
+            return specials.find(c) != std::string::npos;
+        }
+    }
+
+    bool isValidNickname(const std::string& nickname)
+    {
+        if (nickname.empty())
+            return false;
+        for (std::string::size_type i = 0; i < nickname.size(); ++i)
+        {
+            if (!isValidNicknameChar(nickname[i], i == 0))
+                return false;
+        }
+        return true;
     }
 }
