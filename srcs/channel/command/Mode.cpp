@@ -146,12 +146,9 @@ void Mode::execute(Server& server, Client& client, Message& msg)
     }
 
     // 7. 모드 변경 성공 시 추가 인자까지 포함하여 채널 내 전체 브로드캐스트
-    std::string modeNotice = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
-                           + " MODE " + channelName + " " + modeStr + appliedArg + "\r\n";
-
     const std::map<Client*, bool>& members = channel->getMembers();
     for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it) 
     {
-        it->first->appendToOutBuffer(modeNotice);
+        it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + modeStr + appliedArg));
     }
 }

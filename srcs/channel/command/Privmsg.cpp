@@ -42,9 +42,6 @@ void Privmsg::execute(Server& server, Client& client, Message& msg)
     for (size_t i = 0; i < targets.size(); ++i)
     {
         std::string targetName = targets[i];
-        std::string packet = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
-                       + " PRIVMSG " + targetName + " :" + message + "\r\n";
-
         // 3. 수신 대상이 채널인 경우 ('#'으로 시작)
         if (!targetName.empty() && targetName[0] == '#')
         {
@@ -70,7 +67,7 @@ void Privmsg::execute(Server& server, Client& client, Message& msg)
             {
                 if (it->first != &client)
                 {
-                    it->first->appendToOutBuffer(packet);
+                    it->first->appendToOutBuffer(buildMessage(client, "PRIVMSG", targetName, message));
                 }
             }
         }
@@ -87,7 +84,7 @@ void Privmsg::execute(Server& server, Client& client, Message& msg)
             }
 
             // 1:1 메시지 전송
-            targetClient->appendToOutBuffer(packet);
+            targetClient->appendToOutBuffer(buildMessage(client, "PRIVMSG", targetName, message));
         }
     }
 }

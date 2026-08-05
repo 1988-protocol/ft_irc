@@ -90,13 +90,11 @@ void Join::execute(Server& server, Client& client, Message& msg)
             channel->removeInvite(&client);
 
         // 5. 입장 알림 브로드캐스트 (새 유저 포함 채널 내 모든 사람에게 전송)
-        std::string joinMessage = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
-                                + " JOIN :" + channelName + "\r\n";
-    
         const std::map<Client*, bool>& members = channel->getMembers();
         for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
         {
-            it->first->appendToOutBuffer(joinMessage); // it->first 객체 자신의 버퍼에 메시지 추가
+            // it->first 객체 자신의 버퍼에 메시지 추가
+            it->first->appendToOutBuffer(buildMessage(client, "JOIN", "", channelName));
         }
 
         // 6. 입장한 유저(client)에게 Topic 전송

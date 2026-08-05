@@ -59,13 +59,11 @@ void Kick::execute(Server& server, Client& client, Message& msg)
     }
 
     // 6. 강퇴 메시지 전송 (나가는 target 포함 전체 브로드캐스트)
-    std::string kickMessage = ":" + target + "!" + client.getUsername() + "@" + client.getHostname()
-                            + " KICK " + channelName + " " + targetNick + " :" + reason + "\r\n"; // 🌟 " :" 공백 수정
-    
     const std::map<Client*, bool>& members = channel->getMembers();
     for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
     {
-        it->first->appendToOutBuffer(kickMessage);
+        it->first->appendToOutBuffer(buildMessage(client, "KICK", channelName + " " + targetNick, reason));
+
     }
 
     // 7. 채널에서 target 제거 (Channel.cpp 내부에서 방장/초대 목록 연쇄 정리)

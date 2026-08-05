@@ -52,16 +52,10 @@ void Part::execute(Server& server, Client& client, Message& msg)
             reason = params[1];
 
         // 5. PART 메시지 브로드캐스트 (나가는 유저 포함 전원에게 전송)
-        std::string partMessage = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
-                                + " PART " + channelName;
-        if (!reason.empty())
-            partMessage += " :" + reason;
-        partMessage += "\r\n";
-
         const std::map<Client*, bool>& members = channel->getMembers();
         for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
         {
-            it->first->appendToOutBuffer(partMessage);
+            it->first->appendToOutBuffer(buildMessage(client, "PART", channelName, reason));
         }
 
         // 6. 채널 유저 및 방장/초대 목록 연쇄 제거 (removeUser 내부에서 연쇄 처리됨)

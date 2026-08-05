@@ -83,5 +83,5 @@ void Invite::execute(Server& server, Client& client, Message& msg)
     client.appendToOutBuffer(reply(Numeric::RPL_INVITING, clientNick, targetNick + " " + channelName));
 
     // 9. 초대받는 타겟 유저에게 INVITE 알림 전송
-    targetClient->appendToOutBuffer(":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname() + " INVITE " + targetNick + " :" + channelName + "\r\n");
+   invitedClient->appendToOutBuffer(buildMessage(client, "INVITE", invitedNick, channelName));
 }

@@ -72,12 +72,9 @@ void Topic::execute(Server& server, Client& client, Message& msg)
 
     channel->setTopic(newTopic);
 
-    std::string topicMessage = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname()
-                             + " TOPIC " + channelName + " :" + newTopic + "\r\n";
-
     const std::map<Client*, bool>& members = channel->getMembers();
     for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
     {
-        it->first->appendToOutBuffer(topicMessage);
+        it->first->appendToOutBuffer(buildMessage(client, "TOPIC", channelName, newTopic));
     }
 }
