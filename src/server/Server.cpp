@@ -6,6 +6,7 @@
 #include <cerrno>           // errno, EINTR, EAGAIN
 #include <cstddef>          // std::size_t
 #include <unistd.h>
+#include <poll.h>
 #include <netinet/in.h>     // sockaddr_in
 #include <sys/socket.h>     // accept, recv, send
 #include <arpa/inet.h>      // inet_ntoa
