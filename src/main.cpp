@@ -23,7 +23,7 @@ static bool parsePort(const std::string &arg, int &port)
     return true;
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, char* argv[]) {
 
     if (argc != 3)
     {
@@ -39,10 +39,12 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
+    // [changed 0805 비밀번호가 비었을 때, 종료가 되지 않아서 처리했습니다.]
     std::string password(argv[2]);
     if (password.empty())
     {
         std::cerr << "에러: password는 비어 있으면 안 됩니다." << std::endl;
+        return 1;
     }
 
     try
