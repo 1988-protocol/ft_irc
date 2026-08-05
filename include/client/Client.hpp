@@ -33,7 +33,7 @@ class Client {
         void    appendToInBuffer(const std::string &data);
         bool    extractLine(std::string &out);
 
-        void            appendToOutBuffer(const std::string &data);
+        bool            appendToOutBuffer(const std::string &data);
         bool            hasPendingOutput() const;
         std::string     &getOutBuffer();
 

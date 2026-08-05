@@ -76,9 +76,24 @@ bool    Client::extractLine(std::string &out)
 // 출력
 // ────────────────────────────────────────────────────────
 
-void    Client::appendToOutBuffer(const std::string &data)
+namespace
 {
+    // 클라이언트가 응답을 읽지 않거나 잘못된 명령을 계속 보내면 m_outBuffer가
+    // 무한정 커질 수 있다(EAGAIN으로 send()가 못 비우는 동안에도 recv()는 계속
+    // 진행되어 에러 응답이 계속 쌓임) — 상한을 두고 초과 시 연결을 끊는다.
+    const std::string::size_type kMaxOutBufferSize = 64 * 1024;
+}
+
+bool    Client::appendToOutBuffer(const std::string &data)
+{
+    if (data.size() > kMaxOutBufferSize - m_outBuffer.size())
+    {
+        markForDeletion();
+        return false;
+    }
+
     m_outBuffer += data;
+    return true;
 }
 
 bool    Client::hasPendingOutput() const
