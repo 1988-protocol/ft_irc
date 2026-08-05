@@ -86,6 +86,11 @@ namespace
 
 bool    Client::appendToOutBuffer(const std::string &data)
 {
+    if (m_outBuffer.size() > kMaxOutBufferSize)
+    {
+        markForDeletion();
+        return false;
+    }
     if (data.size() > kMaxOutBufferSize - m_outBuffer.size())
     {
         markForDeletion();
