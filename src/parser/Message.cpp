@@ -6,6 +6,32 @@ Message::Message()
 {
 }
 
+Message::Message(const Message& other)
+    : m_prefix(other.m_prefix),
+      m_command(other.m_command),
+      m_params(other.m_params),
+      m_trailing(other.m_trailing),
+      m_hasTrailing(other.m_hasTrailing)
+{
+}
+
+Message& Message::operator=(const Message& other)
+{
+    if (this != &other)
+    {
+        m_prefix = other.m_prefix;
+        m_command = other.m_command;
+        m_params = other.m_params;
+        m_trailing = other.m_trailing;
+        m_hasTrailing = other.m_hasTrailing;
+    }
+    return *this;
+}
+
+Message::~Message()
+{
+}
+
 const std::string& Message::getPrefix() const { return m_prefix; }
 const std::string& Message::getCommand() const { return m_command; }
 const std::vector<std::string>& Message::getParams() const { return m_params; }
