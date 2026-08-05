@@ -20,20 +20,6 @@ Socket::~Socket()
         close(m_fd);
 }
 
-Socket::Socket(Socket const &other) 
-{
-	*this = other;
-}
-
-Socket &Socket::operator=(Socket const &other)
-{
-	if (this != &other)
-	{
-		this->m_fd = other.m_fd;
-	}
-	return *this;
-}
-
 // ────────────────────────────────────────────────────────
 // 내부 함수
 // ────────────────────────────────────────────────────────
