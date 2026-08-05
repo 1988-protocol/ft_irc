@@ -8,7 +8,7 @@
 
 #include "parser/commands/Pass.hpp"
 #include "parser/commands/Nick.hpp"
-// #include "parser/commands/User.hpp"
+#include "parser/commands/User.hpp"
 // #include "parser/commands/Ping.hpp"
 // #include "parser/commands/Pong.hpp"
 // #include "parser/commands/Quit.hpp"
@@ -25,7 +25,7 @@ Parser::Parser()
 {
     registerCommand("PASS", new Pass());
     registerCommand("NICK", new Nick());
-    // registerCommand("USER", new User());
+    registerCommand("USER", new User());
     // registerCommand("PING", new Ping());
     // registerCommand("PONG", new Pong());
     // registerCommand("QUIT", new Quit());

@@ -25,11 +25,12 @@ SRCS		= \
 	parser/Message.cpp \
 	parser/Parser.cpp \
 	parser/commands/Nick.cpp \
-	parser/commands/Pass.cpp
+	parser/commands/Pass.cpp \
+	parser/commands/User.cpp
 	# parser/commands/Ping.cpp \
 	# parser/commands/Pong.cpp \
 	# parser/commands/Quit.cpp \
-	# parser/commands/User.cpp
+	
 
 # src/server/Server.cpp -> obj/server/Server.o (하위 구조 유지)
 OBJS		= $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
