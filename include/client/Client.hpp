@@ -17,7 +17,6 @@ class Client {
         bool            m_hasCorrectPassword;
         std::string     m_nickname;
         std::string     m_username;
-        std::string     m_realname;
         std::string     m_hostname;
         std::string     m_servername;
 

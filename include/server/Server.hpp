@@ -58,7 +58,9 @@ class Server{
         // Server Auth 관련 ────────────────────────────────────────────────────────
         const std::string& getPassword() const;
         bool isNicknameInUse(const std::string& nickname) const;
-        
+        void registerNickname(const std::string& nickname, Client& client);
+        void releaseNickname(const std::string& nickname);
+
         //Server cmds 관련────────────────────────────────────────────────────────
         Channel* getChannel(const std::string& channelName);
         void addChannel(const std::string& channelName, Channel* channel);
