@@ -48,6 +48,7 @@ class Client {
         bool                hasCorrectPassword() const;
         const std::string   &getNickname() const;
         const std::string   &getUsername() const;
+        const std::string   &getHostname() const;
 
         //setter
         void            setNickname(const std::string &nickname);

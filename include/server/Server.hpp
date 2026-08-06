@@ -10,6 +10,7 @@
 #include "server/PollManager.hpp"
 #include "client/Client.hpp"
 #include "parser/Parser.hpp"
+#include "channel/Channel.hpp"
 
 class Server{
     
@@ -42,6 +43,7 @@ class Server{
         std::map<std::string, Client*> m_nicknames;
 
         // Server cmds 관련────────────────────────────────────────────────────────
+        std::map<std::string, Channel*> m_channels;
 
     public :
         //ocf
@@ -58,6 +60,10 @@ class Server{
         bool isNicknameInUse(const std::string& nickname) const;
         
         //Server cmds 관련────────────────────────────────────────────────────────
+        Channel* getChannel(const std::string& channelName);
+        void addChannel(const std::string& channelName, Channel* channel);
+        void removeChannel(const std::string& channelName);
+        Client* getClientByNick(const std::string& nickname);
 
 };
 

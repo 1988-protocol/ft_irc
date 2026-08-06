@@ -1,19 +1,30 @@
 #include "server/Server.hpp"
-#include "common/Utils.hpp"
+#include "channel/Channel.hpp"
 
-const std::string& Server::getPassword() const
+Channel* Server::getChannel(const std::string& channelName)
 {
-    return m_password;
+    std::map<std::string, Channel*>::iterator it = m_channels.find(channelName);
+    if (it != m_channels.end())
+        return it->second;
+    return NULL;
 }
 
-bool Server::isNicknameInUse(const std::string& nickname) const
+void Server::addChannel(const std::string& channelName, Channel* channel)
 {
-    for (std::map<int, Client*>::const_iterator it = m_clients.begin();
-        it != m_clients.end(); ++it)
+    m_channels[channelName] = channel;
+}
+
+void Server::removeChannel(const std::string& channelName)
+{
+    m_channels.erase(channelName);
+}
+
+Client* Server::getClientByNick(const std::string& nickname)
+{
+    for (std::map<int, Client*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
     {
-        // nickname 중복 함수를 거치도록 수정했습니다.
-        if (Utils::isSameNickname(it->second->getNickname(), nickname))
-            return true;
+        if (it->second && it->second->getNickname() == nickname)
+            return it->second;
     }
-    return false;
+    return NULL;
 }

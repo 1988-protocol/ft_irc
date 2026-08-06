@@ -142,6 +142,8 @@ const std::string &Client::getNickname() const   {return m_nickname;}
 
 const std::string &Client::getUsername() const   {return m_username;}
 
+const std::string &Client::getHostname() const   {return m_hostname;}
+
 // ────────────────────────────────────────────────────────
 // setter
 // ────────────────────────────────────────────────────────
