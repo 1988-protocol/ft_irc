@@ -1,4 +1,5 @@
 #include "common/Utils.hpp"
+#include "client/Client.hpp"
 #include <sstream>
 #include <algorithm>
 #include <cctype>
@@ -45,7 +46,7 @@ std::string reply(int code, const std::string& target, const std::string& msg)
 // Channel command에서 Braodcasting Message 조합하기 위한 함수
 std::string buildMessage(const Client& client, const std::string& cmd, const std::string& target, const std::string& msg)
 {
-    std::string line = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname();
+    std::string line = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp();
     line += " " + cmd;
     if (!target.empty())
         line += " " + target;

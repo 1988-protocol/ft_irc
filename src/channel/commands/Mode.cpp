@@ -11,7 +11,7 @@ Mode::Mode() : ICommand() {}
 
 Mode::~Mode() {}
 
-void Mode::execute(Server& server, Client& client, Message& msg)
+void Mode::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     std::string target = client.getNickname();
@@ -64,7 +64,7 @@ void Mode::execute(Server& server, Client& client, Message& msg)
 
     bool isAdding = (modeStr[0] == '+');
     char modeFlag = modeStr[1]; // +인자 빼고 어떤 모드인지 확인하기 위한 알파벳 체크용
-    int paramIdx = 2; // 추가 인자가 위치할 인덱스
+    size_t paramIdx = 2; // 추가 인자가 위치할 인덱스
 
     std::string appliedArg = ""; // 브로드캐스트용 추가 인자 저장 변수
 
@@ -149,6 +149,6 @@ void Mode::execute(Server& server, Client& client, Message& msg)
     const std::map<Client*, bool>& members = channel->getMembers();
     for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it) 
     {
-        it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + modeStr + appliedArg));
+        it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + modeStr + appliedArg, ""));
     }
 }

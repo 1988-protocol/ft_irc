@@ -1,7 +1,7 @@
 #ifndef TOPIC_HPP
 # define TOPIC_HPP
 
-#include "ICommand.hpp"
+#include "common/ICommand.hpp"
 
 class Topic : public ICommand
 {
@@ -9,7 +9,7 @@ public:
     Topic();
     virtual ~Topic();
 
-    virtual void execute(Server& server, Client& client, Message& msg);
+    virtual void execute(Server& server, Client& client, const Message& msg);
 };
 
 #endif

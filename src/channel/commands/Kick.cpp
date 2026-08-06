@@ -10,7 +10,7 @@ Kick::Kick() : ICommand() {}
 
 Kick::~Kick() {}
 
-void Kick::execute(Server& server, Client& client, Message& msg)
+void Kick::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     std::string target = client.getNickname();

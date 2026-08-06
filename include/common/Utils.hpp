@@ -16,7 +16,7 @@ class Client;
 std::string reply(int code, const std::string& target, const std::string& msg);
 
 // Channel commands에서 Braodcasting Message를 build 해주는 함수
-std::string buildMessage(const Client& client, const std::string& cmd, const std::string& target, const std::string& msg);
+std::string buildMessage(const Client& client, const std::string& cmd, const std::string& target, const std::string& msg = "");
 
 // 서버 식별 이름을 반환한다. Server 클래스가 아직 실구현되지 않은 상태(Network Phase1 몫)라
 // 임시 상수를 감싸 반환하는 함수로 두었다 — 실제 호스트명이 필요해지면 이 함수 내부만 바뀌면 된다.

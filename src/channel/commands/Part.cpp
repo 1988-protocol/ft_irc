@@ -10,7 +10,7 @@ Part::Part() : ICommand() {}
 
 Part::~Part() {}
 
-void Part::execute(Server& server, Client& client, Message& msg)
+void Part::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     std::string target = client.getNickname();

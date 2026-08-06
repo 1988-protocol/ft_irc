@@ -10,7 +10,7 @@ Join::Join() : ICommand() {}
 
 Join::~Join() {}
 
-void Join::execute(Server& server, Client& client, Message& msg)
+void Join::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     std::string target = client.getNickname();
@@ -94,7 +94,7 @@ void Join::execute(Server& server, Client& client, Message& msg)
         for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
         {
             // it->first 객체 자신의 버퍼에 메시지 추가
-            it->first->appendToOutBuffer(buildMessage(client, "JOIN", "", channelName));
+            it->first->appendToOutBuffer(buildMessage(client, "JOIN", channelName, ""));
         }
 
         // 6. 입장한 유저(client)에게 Topic 전송

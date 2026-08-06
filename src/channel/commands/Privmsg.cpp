@@ -10,7 +10,7 @@ Privmsg::Privmsg() : ICommand() {}
 
 Privmsg::~Privmsg() {}
 
-void Privmsg::execute(Server& server, Client& client, Message& msg)
+void Privmsg::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     const std::string target = client.getNickname();

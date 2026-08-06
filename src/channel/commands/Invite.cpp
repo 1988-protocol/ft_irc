@@ -10,7 +10,7 @@ Invite::Invite() : ICommand() {}
 
 Invite::~Invite() {}
 
-void Invite::execute(Server& server, Client& client, Message& msg)
+void Invite::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     std::string clientNick = client.getNickname();
@@ -83,5 +83,5 @@ void Invite::execute(Server& server, Client& client, Message& msg)
     client.appendToOutBuffer(reply(Numeric::RPL_INVITING, clientNick, targetNick + " " + channelName));
 
     // 9. 초대받는 타겟 유저에게 INVITE 알림 전송
-   invitedClient->appendToOutBuffer(buildMessage(client, "INVITE", invitedNick, channelName));
+   targetClient->appendToOutBuffer(buildMessage(client, "INVITE", targetNick, channelName));
 }

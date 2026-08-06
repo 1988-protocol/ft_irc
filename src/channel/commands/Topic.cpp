@@ -10,7 +10,7 @@ Topic::Topic() : ICommand() {}
 
 Topic::~Topic() {}
 
-void Topic::execute(Server& server, Client& client, Message& msg)
+void Topic::execute(Server& server, Client& client, const Message& msg)
 {
     const std::vector<std::string>& params = msg.getParams();
     std::string target = client.getNickname();
