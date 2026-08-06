@@ -6,6 +6,7 @@
 #include "common/Utils.hpp"
 #include "common/Replies.hpp"
 #include <cstdlib>
+#include <sstream>
 
 Mode::Mode() : ICommand() {}
 
@@ -40,9 +41,22 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     // 인자가 채널명 하나만 들어온 경우: 단순 모드 상태 조회
     if (params.size() == 1) {
         std::string modeStr = channel->getModeString();
+        std::string modeParams = "";
+
+        if (!channel->getKey().empty())
+            modeParams += " " + channel->getKey();
+
+        if (channel->getUserLimit() > 0)
+        {
+            std::ostringstream oss;
+            oss << channel->getUserLimit();
+            modeParams += " " + oss.str();
+        }
+
         if (modeStr.empty())
             modeStr = "+";
-        client.appendToOutBuffer(reply(Numeric::RPL_CHANNELMODEIS, target, channelName + " :" + modeStr));
+
+        client.appendToOutBuffer(reply(Numeric::RPL_CHANNELMODEIS, target, channelName + " " + modeStr + modeParams));
         return;
     }
 

@@ -40,7 +40,7 @@ namespace Numeric
     const int ERR_UNKNOWNMODE           = 472;  // 알 수 없는 모드
     const int ERR_INVITEONLYCHAN        = 473;  // 초대 전용 채널
     const int ERR_BADCHANNELKEY         = 475;  // 잘못된 채널 키
-    const int ERR_CHANOPRIVSNEEDED      = 482;  // 채널 운영자만 토픽을 변경할 수 있음
+    const int ERR_CHANOPRIVSNEEDED      = 482;  // 채널 운영자의 권한이 필요
 }
 
 #endif
