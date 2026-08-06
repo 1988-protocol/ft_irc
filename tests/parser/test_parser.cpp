@@ -2,6 +2,7 @@
 #include "parser/Parser.hpp"
 #include "client/Client.hpp"
 #include "server/Server.hpp"
+#include "common/Utils.hpp"
 
 #include <iostream>
 #include <string>
@@ -365,6 +366,79 @@ namespace
                 "regression: second client successfully acquired nickname freed by QUIT");
         }
     }
+
+    void testPingCommandValidation()
+    {
+        Parser parser;
+        Server server(6667, "testpass");
+
+        // 1. PING 파라미터 없음 -> 409 ERR_NOORIGIN
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK pinguser");
+            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            client.getOutBuffer().clear();
+
+            parser.process(server, client, "PING");
+            check(client.getOutBuffer().find(" 409 ") != std::string::npos,
+                "ping: PING without parameters returns 409 ERR_NOORIGIN");
+        }
+
+        // 2. PING token (단일 파라미터) -> PONG :token
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK pinguser");
+            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            client.getOutBuffer().clear();
+
+            parser.process(server, client, "PING token123");
+            check(client.getOutBuffer().find(" PONG ") != std::string::npos && client.getOutBuffer().find(":token123") != std::string::npos,
+                "ping: PING single middle param returns PONG token123");
+        }
+
+        // 3. PING :token (trailing 단일 파라미터) -> PONG :token
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK pinguser");
+            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            client.getOutBuffer().clear();
+
+            parser.process(server, client, "PING :token456");
+            check(client.getOutBuffer().find(" PONG ") != std::string::npos && client.getOutBuffer().find(":token456") != std::string::npos,
+                "ping: PING single trailing param returns PONG token456");
+        }
+
+        // 4. PING server1 :server2 (2개 파라미터: server1=token, server2=target server)
+        // server2가 존재하지 않는 서버일 경우 -> 402 ERR_NOSUCHSERVER
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK pinguser");
+            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            client.getOutBuffer().clear();
+
+            parser.process(server, client, "PING server1 :unknown_server");
+            check(client.getOutBuffer().find(" 402 ") != std::string::npos,
+                "ping: PING with invalid server2 returns 402 ERR_NOSUCHSERVER");
+        }
+
+        // 5. PING server1 :server2 (server2가 본인 서버 이름일 경우 위치 보존하여 server1을 token으로 응답)
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK pinguser");
+            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            client.getOutBuffer().clear();
+
+            std::string serverName = getServerName();
+            parser.process(server, client, "PING server1 :" + serverName);
+            check(client.getOutBuffer().find(" PONG ") != std::string::npos && client.getOutBuffer().find(":server1") != std::string::npos,
+                "ping: PING server1 :server2 preserves position and replies PONG with server1");
+        }
+    }
 }
 
 int main()
@@ -373,6 +447,7 @@ int main()
     testDispatcherAndRegistration();
     testAdditionalErrorPaths();
     testNicknameLifecycleRegressions();
+    testPingCommandValidation();
 
     std::cout << "----" << std::endl;
     if (g_failureCount == 0)
