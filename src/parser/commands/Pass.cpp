@@ -1,16 +1,3 @@
-// ============================================================================
-// [Dependencies - Parser <-> Network Coordination]
-// 클라이언트와 서버가 비밀번호를 처리하기 위해 필요한 인터페이스
-//
-// Client:
-//   필요한 세터: setHasCorrectPassword
-//   - void setHasCorrectPassword(bool value);
-//
-// Server:
-//   필요한 게터: getPassword
-//   - const std::string& getPassword() const;
-// ============================================================================
-
 #include "parser/commands/Pass.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"

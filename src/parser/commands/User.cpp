@@ -1,18 +1,3 @@
-// ============================================================================
-// [Dependencies - Parser <-> Network Coordination]
-//
-// Client:
-//   - const std::string& getNickname() const;
-//   - bool isRegistered() const;
-//   - void appendToOutBuffer(const std::string& line);
-//   - void setUsername(const std::string& username);
-//   - bool hasCorrectPassword() const;
-//   - void setRegistered(bool value);
-//
-// Server:
-//   - *None*
-// ============================================================================
-
 #include "parser/commands/User.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"
@@ -44,6 +29,7 @@ void User::execute(Server& server, Client& client, const Message& msg)
         client.appendToOutBuffer(reply(Numeric::ERR_ALREADYREGISTRED, target, ":You may not reregister"));
         return;
     }
+    // 이 부분은 체크 필요함, 왜냐하면 real_name이 들어가지 않아서 정말 4개가 필요하지 않을수도?
     if (msg.getParams().size() != 3 || !msg.hasTrailing())
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "USER :Not enough parameters"));

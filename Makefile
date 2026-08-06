@@ -27,6 +27,9 @@ SRCS		= \
 	parser/commands/Nick.cpp \
 	parser/commands/Pass.cpp \
 	parser/commands/User.cpp \
+	parser/commands/Ping.cpp \
+	parser/commands/Pong.cpp \
+	parser/commands/Quit.cpp \
 	channel/Channel.cpp \
 	channel/commands/Join.cpp \
 	channel/commands/Part.cpp \
@@ -58,11 +61,26 @@ clean:
 	@echo "==> 오브젝트 및 의존성 파일 삭제"
 
 fclean: clean
-	rm -f $(NAME)
+	rm -f $(NAME) test_parser
 	@echo "==> $(NAME) 삭제"
 
 re: fclean all
 
+# ── 개인 테스트 전용 규칙 (선택 실행) ─────────────────────────────────────
+TEST_NAME   = test_parser
+TEST_SRCS   = $(filter-out main.cpp, $(SRCS))
+
+test: $(NAME)
+	@echo "==> Parser 단위/통합 테스트 빌드 중..."
+	$(CXX) $(CXXFLAGS) tests/parser/test_parser.cpp $(addprefix $(SRC_DIR)/, $(TEST_SRCS)) -o $(TEST_NAME)
+	@echo "==> 1. $(TEST_NAME) 실행"
+	./$(TEST_NAME)
+	@echo "==> 2. test_integration.py 실행"
+	python3 tests/test_integration.py
+
 -include $(DEPS)
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re test
+
+
+

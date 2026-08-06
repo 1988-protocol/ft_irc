@@ -13,3 +13,16 @@ Ping& Ping::operator=(const Ping& other)
 }
 Ping::~Ping() {}
 
+// RFC1459 4.6.2 PING: 클라이언트가 보낸 토큰을 그대로 PONG으로 돌려줘 연결이 살아있음을
+// 확인시켜준다. numeric reply가 아니라 별도 커맨드 응답이라 reply() 헬퍼를 쓰지 않고
+// 직접 라인을 만든다. 서버가 유휴 클라이언트에게 먼저 PING을 보내는 능동적 헬스체크는
+// poll() 타이머를 다루는 Network의 몫이라 여기서는 다루지 않는다.
+void Ping::execute(Server& server, Client& client, const Message& msg)
+{
+    (void)server;
+    std::string token = msg.hasTrailing() ? msg.getTrailing()
+        : (msg.getParams().empty() ? "" : msg.getParams()[0]);
+
+    // [Change] queueReply() 대신 real Client의 appendToOutBuffer() 사용
+    client.appendToOutBuffer(":" + getServerName() + " PONG " + getServerName() + " :" + token + "\r\n");
+}
