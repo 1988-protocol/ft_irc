@@ -102,14 +102,13 @@ namespace Utils
         return result;
     }
 
-    char toIRCLower(char c) // 주어진 문자를 IRC 프로토콜 규격에 맞춘 소문자로 변환.
+    char toIRCLower(char c) // 주어진 문자를 IRC 프로토콜 2.2 규격에 맞춘 소문자로 변환.
     {
         if (c >= 'A' && c <= 'Z')
             return static_cast<char>(c + ('a' - 'A'));
         if (c == '[') return '{';
         if (c == ']') return '}';
         if (c == '\\') return '|';
-        if (c == '~') return '^';
         return c;
     }
 

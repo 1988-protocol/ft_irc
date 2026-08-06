@@ -1,14 +1,3 @@
-// ============================================================================
-// [Dependencies - Parser <-> Network Coordination]
-//
-// Client:
-//   - const std::string& getNickname() const;
-//   - void appendToOutBuffer(const std::string& line);
-//
-// Server:
-//   - void releaseNickname(const std::string& nickname);
-// ============================================================================
-
 #include "parser/commands/Quit.hpp"
 #include "parser/Message.hpp"
 #include "client/Client.hpp"
@@ -22,3 +11,13 @@ Quit& Quit::operator=(const Quit& other)
     return *this;
 }
 Quit::~Quit() {}
+
+void Quit::execute(Server& server, Client& client, const Message& msg)
+{
+    if (!client.getNickname().empty())
+        server.releaseNickname(client.getNickname());
+
+    std::string reason = msg.hasTrailing() ? msg.getTrailing() : "Leaving";
+    client.appendToOutBuffer("ERROR :Closing Link: " + reason + "\r\n");
+    client.markForDeletion();
+}
