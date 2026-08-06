@@ -1,4 +1,4 @@
-
+#include "server/Server.hpp"
 #include "channel/Channel.hpp"
 
 Channel* Server::getChannel(const std::string& channelName)

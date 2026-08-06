@@ -1,0 +1,39 @@
+# Object files and Build Artifacts
+*.o
+*.d
+*.gch
+*.pch
+
+# Executables
+ircserv
+test_parser
+*.out
+*.exe
+
+# Debugging and Profiling
+vgcore.*
+gmon.out
+*.dSYM/
+core
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# Language server & compilation database files
+.clangd
+compile_commands.json
