@@ -231,22 +231,20 @@ namespace
                 "dispatch: NICK starting with special -> 432 ERR_ERRONEUSNICKNAME");
         }
 
-        // 형식 위반 닉네임(RFC 1459 비허용 특수문자 _ 포함) -> 432
+        // Irssi 호환성: _ (underscore) 포함 닉네임 허용 테스트
         {
             Client client;
             parser.process(server, client, "NICK bad_nick");
-            // [Change] getOutbox() 대신 real Client의 getOutBuffer() 사용
-            check(client.getOutBuffer().find(" 432 ") != std::string::npos,
-                "dispatch: NICK with underscore -> 432 ERR_ERRONEUSNICKNAME");
+            check(client.getOutBuffer().find(" 432 ") == std::string::npos,
+                "dispatch: NICK with underscore is allowed for Irssi compatibility");
         }
 
-        // 형식 위반 닉네임(RFC 1459 비허용 특수문자 | 포함) -> 432
+        // Irssi 호환성: | (pipe) 포함 닉네임 허용 테스트
         {
             Client client;
             parser.process(server, client, "NICK bad|nick");
-            // [Change] getOutbox() 대신 real Client의 getOutBuffer() 사용
-            check(client.getOutBuffer().find(" 432 ") != std::string::npos,
-                "dispatch: NICK with pipe -> 432 ERR_ERRONEUSNICKNAME");
+            check(client.getOutBuffer().find(" 432 ") == std::string::npos,
+                "dispatch: NICK with pipe is allowed for Irssi compatibility");
         }
 
         // 형식 위반 닉네임(9자 초과) -> 432

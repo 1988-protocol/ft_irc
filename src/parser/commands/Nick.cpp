@@ -19,6 +19,14 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
 {
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
+    // TODO(팀 논의 필요): Message 캡슐화(getParamCount / getParam) 합의 시 아래 코드로 대체 가능:
+    // if (msg.getParamCount() < 1)
+    // {
+    //     client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
+    //     return;
+    // }
+    // const std::string& nickname = msg.getParam(0);
+
     if (msg.getParams().empty())
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
