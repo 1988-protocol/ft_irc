@@ -167,7 +167,7 @@ namespace
         // 중복 닉네임 -> 433 (먼저 다른 클라이언트가 taken을 선점)
         {
             Client owner;
-            server.registerNickname("taken", owner);
+            parser.process(server, owner, "NICK taken");
 
             Client challenger;
             parser.process(server, challenger, "NICK taken");
