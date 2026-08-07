@@ -73,7 +73,8 @@ Message Message::parse(const std::string& rawLine)
 
     // NUL 문자 검증 (Note 4) - 보안 취약점 차단 및 Fail-Fast
     // 네트워크 단에서 처리하게 된 경우 여기 if문 제거
-    if (line.find('\0') != std::string::npos)
+    // 2. NUL('\0') 또는 내부 '\r' 존재 시 즉시 거부 (Fail-Fast)
+    if (line.find('\0') != std::string::npos || line.find('\r') != std::string::npos)
     {
         return msg;
     }

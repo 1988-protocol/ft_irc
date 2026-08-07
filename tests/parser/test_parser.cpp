@@ -438,6 +438,20 @@ namespace
             check(client.getOutBuffer().find(" PONG ") != std::string::npos && client.getOutBuffer().find(":server1") != std::string::npos,
                 "ping: PING server1 :server2 preserves position and replies PONG with server1");
         }
+
+        // 6. PING server1 :SERVER2 (server2 대소문자 무시 검증)
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK pinguser");
+            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            client.getOutBuffer().clear();
+
+            std::string upperServerName = Utils::toUpper(getServerName());
+            parser.process(server, client, "PING server1 :" + upperServerName);
+            check(client.getOutBuffer().find(" PONG ") != std::string::npos && client.getOutBuffer().find(":server1") != std::string::npos,
+                "ping: PING with case-insensitive server2 replies PONG correctly");
+        }
     }
 }
 

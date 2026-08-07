@@ -36,7 +36,9 @@ void Ping::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    if (params.size() >= 2 && params[1] != getServerName())
+    // RFC 1123 Section 2.1 & RFC 1459 Section 2.2:
+    // 호스트명 및 IRC 서버 식별자(servername)는 대소문자를 구분하지 않음 (Case-insensitive).
+    if (params.size() >= 2 && Utils::toUpper(params[1]) != Utils::toUpper(getServerName()))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHSERVER, target, params[1] + " :No such server"));
         return;
