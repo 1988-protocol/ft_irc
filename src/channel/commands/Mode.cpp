@@ -43,9 +43,11 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         std::string modeStr = channel->getModeString();
         std::string modeParams = "";
 
+        // +k 모드인 경우 파라미터에 비밀번호 문자열 추가
         if (!channel->getKey().empty())
             modeParams += " " + channel->getKey();
 
+        // +l 모드인 경우 파라미터에 유저 수 추가
         if (channel->getUserLimit() > 0)
         {
             std::ostringstream oss;
@@ -72,97 +74,131 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    std::string modeStr = params[1]; //+k, +i, +o
+    std::string modeStr = params[1]; //+k, +i, +o 일 수도 있고 +itk 나 +i-t+o 일 수도 있음
     if (modeStr.size() < 2 || (modeStr[0] != '+' && modeStr[0] != '-')) 
         return;
 
     bool isAdding = (modeStr[0] == '+');
-    char modeFlag = modeStr[1]; // +인자 빼고 어떤 모드인지 확인하기 위한 알파벳 체크용
     size_t paramIdx = 2; // 추가 인자가 위치할 인덱스
 
-    std::string appliedArg = ""; // 브로드캐스트용 추가 인자 저장 변수
+    std::string appliedModes = ""; // 실제 적용된 모드 기호 모음 (예: "+itk")
+    std::string appliedArg = ""; // 브로드캐스트용 추가 인자 저장 변수 (예: "secret user2")
 
-    // 6. 모드 플래그별 분기 처리
-    switch (modeFlag)
+    for (size_t i = 0; i < modeStr.size(); ++i)
     {
-        case 'i': // Invite Only
-            channel->setInviteOnly(isAdding);
-            break;
+        char modeFlag = modeStr[i];
 
-        case 't': // Topic Op Only
-            channel->setTopicOpOnly(isAdding);
-            break;
+        //부호 변경 처리
+        if (modeFlag =='+')
+        {
+            isAdding = true;
+            if (appliedModes.empty() || appliedModes[appliedModes.size() - 1] != '+')
+                appliedModes += '+';
+            continue;
+        }
+        if (modeFlag =='-')
+        {
+            isAdding = false;
+            if (appliedModes.empty() || appliedModes[appliedModes.size() - 1] != '-')
+                appliedModes += '-';
+            continue;
+        }
+        // 6. 모드 플래그별 분기 처리
+        switch (modeFlag)
+        {
+            case 'i': // Invite Only
+                channel->setInviteOnly(isAdding);
+                appliedModes += 'i';
+                break;
 
-        case 'k': // Key (+k password / -k)
-            {
+            case 't': // Topic Op Only
+                channel->setTopicOpOnly(isAdding);
+                appliedModes += 't';
+                break;
+
+            case 'k': // Key (+k password / -k)
                 if (isAdding)
                 {
-                    if (params.size() <= paramIdx) {
+                    if (params.size() <= paramIdx)
+                    {
                         client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
-                        return;
+                        continue;
                     }
                     std::string keyArg = params[paramIdx++];
                     channel->setKey(keyArg);
-                    appliedArg = " " + keyArg;
-                } else {
-                    channel->removeKey();
+                    appliedModes += 'k';
+                    appliedArg += " " + keyArg;
                 }
-            }
-            break;
+                else
+                {
+                    channel->removeKey();
+                    appliedModes += 'k';
+                }
+                break;
 
-        case 'l': // User Limit (+l 10 / -l)
-            {
+            case 'l': // User Limit (+l 10 / -l)
                 if (isAdding)
                 {
-                    if (params.size() <= paramIdx) {
+                    if (params.size() <= paramIdx) 
+                    {
                         client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
-                        return;
+                        continue;
                     }
                     // 리밋 숫자 변환
                     int limit = std::atoi(params[paramIdx].c_str());
                     if (limit <= 0) // 무효한 값이면 리턴
-                        return;
+                    {
+                        paramIdx++;
+                        continue;
+                    }
                     channel->setUserLimit(limit);
-                    appliedArg = " " + params[paramIdx++];
-                } else {
+                    appliedModes += 'l';
+                    appliedArg += " " + params[paramIdx++];
+                }
+                else
+                {
                     channel->removeUserLimit();
+                    appliedModes += 'l';
                 }
-            }
-            break;
+                break;
 
-        case 'o': // Operator 권한 부여/박탈 (+o target / -o target)
-            {
-                if (params.size() <= paramIdx)
+            case 'o': // Operator 권한 부여/박탈 (+o target / -o target)
                 {
-                    client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
-                    return;
-                }
-                std::string targetNick = params[paramIdx++];
-                Client* targetClient = server.getClientByNick(targetNick);
+                    if (params.size() <= paramIdx)
+                    {
+                        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
+                        continue;
+                    }
+                    std::string targetNick = params[paramIdx++];
+                    Client* targetClient = server.getClientByNick(targetNick);
                 
-                if (!targetClient || !channel->isUserInChannel(targetClient))
-                {
-                    client.appendToOutBuffer(reply(Numeric::ERR_USERNOTINCHANNEL, target, targetNick + " " + channelName + " :They aren't on that channel"));
-                    return;
+                    if (!targetClient || !channel->isUserInChannel(targetClient))
+                    {
+                        client.appendToOutBuffer(reply(Numeric::ERR_USERNOTINCHANNEL, target, targetNick + " " + channelName + " :They aren't on that channel"));
+                        continue;
+                    }
+
+                    if (isAdding) channel->addOperator(targetClient); //chanel에 
+                    else channel->removeOperator(targetClient);
+                    appliedModes += 'o';
+                    appliedArg += " " + targetNick;
                 }
+                break;
 
-                if (isAdding) channel->addOperator(targetClient); //chanel에 
-                else channel->removeOperator(targetClient);
-                
-                appliedArg = " " + targetNick;
-            }
-            break;
-
-        default:
-            // 알 수 없는 모드
-            client.appendToOutBuffer(reply(Numeric::ERR_UNKNOWNMODE, target, std::string(1, modeFlag)+ " :is unknown mode char to me"));
-            return;
+            default:
+                // 알 수 없는 모드
+                client.appendToOutBuffer(reply(Numeric::ERR_UNKNOWNMODE, target, std::string(1, modeFlag)+ " :is unknown mode char to me"));
+                break;
+        }
     }
 
-    // 7. 모드 변경 성공 시 추가 인자까지 포함하여 채널 내 전체 브로드캐스트
-    const std::map<Client*, bool>& members = channel->getMembers();
-    for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it) 
+    // 실제로 적용된 모드가 1개라도 있는 경우에만 브로드캐스트
+    if (!appliedModes.empty() && appliedModes != "+" && appliedModes != "-")
     {
-        it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + modeStr + appliedArg, ""));
+        const std::map<Client*, bool>& members = channel->getMembers();
+        for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it) 
+        {
+            it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + appliedModes + appliedArg, ""));
+        }
     }
 }

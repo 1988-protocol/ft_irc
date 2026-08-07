@@ -110,18 +110,28 @@ void Join::execute(Server& server, Client& client, const Message& msg)
 
         //입장한 유저에게 유저목록 전송
         std::string userList = "";
+        // 안전한 닉네임 전송 길이 (최대 512인데 앞에 붙는 서버이름, 닉네임, 채널명 헤더)
+        const size_t MAX_USER_LIST_LEN = 400;
         for (std::map<Client*, bool>::const_iterator it = members.begin(); it != members.end(); ++it)
         {
+            std::string entry = (channel->isOperator(it->first) ? "@" : "") + it->first->getNickname();
+            
+            // 새 닉네임을 붙였을 때 400자를 초과하면, 지금까지 쌓인 목록을 먼저 353으로 전송
+            if (!userList.empty() && (userList.size() + entry.size() + 1 > MAX_USER_LIST_LEN))
+            {
+                client.appendToOutBuffer(reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + userList));
+                userList = "";
+            }
             if (!userList.empty())
                 userList += " ";
-            if (channel->isOperator(it->first))
-                userList += "@";
-            userList += it->first->getNickname();
+            userList += entry;
         }
-        client.appendToOutBuffer(reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + userList));
-
-        // 366 RPL_ENDOFNAMES
+        //userList에 남은 내용 전송
+        if (!userList.empty())
+        {
+            client.appendToOutBuffer(reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + userList));
+        }
+        // 366 RPL_ENDOFNAMES(목록 전송 완료 신호 - 항상 맨 마지막에 1번만 전송)
         client.appendToOutBuffer(reply(Numeric::RPL_ENDOFNAMES, target, channelName + " :End of /NAMES list."));
     }
-
 }

@@ -24,7 +24,14 @@ void Server::addChannel(const std::string& channelName, Channel* channel)
 
 void Server::removeChannel(const std::string& channelName)
 {
-    m_channels.erase(channelName);
+    std::map<std::string, Channel*>::iterator it = m_channels.find(channelName);
+    if (it != m_channels.end())
+    {
+        // Server가 객체 메모리 해제
+        delete it->second;
+        // map 항목 삭제
+        m_channels.erase(it);
+    }
 }
 
 // [changed 0807] m_nicknames를 정규화 키(IRC Lowercase)로 저장하므로
