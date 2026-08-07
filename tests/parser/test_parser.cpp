@@ -376,8 +376,9 @@ namespace
         {
             Client client;
             parser.process(server, client, "PASS testpass");
-            parser.process(server, client, "NICK pinguser");
-            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            parser.process(server, client, "NICK pinguser1");
+            parser.process(server, client, "USER pinguser1 0 * :Ping User");
+            check(client.isRegistered() == true, "setup: pinguser1 registered successfully");
             client.getOutBuffer().clear();
 
             parser.process(server, client, "PING");
@@ -389,8 +390,9 @@ namespace
         {
             Client client;
             parser.process(server, client, "PASS testpass");
-            parser.process(server, client, "NICK pinguser");
-            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            parser.process(server, client, "NICK pinguser2");
+            parser.process(server, client, "USER pinguser2 0 * :Ping User");
+            check(client.isRegistered() == true, "setup: pinguser2 registered successfully");
             client.getOutBuffer().clear();
 
             parser.process(server, client, "PING token123");
@@ -402,8 +404,9 @@ namespace
         {
             Client client;
             parser.process(server, client, "PASS testpass");
-            parser.process(server, client, "NICK pinguser");
-            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            parser.process(server, client, "NICK pinguser3");
+            parser.process(server, client, "USER pinguser3 0 * :Ping User");
+            check(client.isRegistered() == true, "setup: pinguser3 registered successfully");
             client.getOutBuffer().clear();
 
             parser.process(server, client, "PING :token456");
@@ -416,8 +419,9 @@ namespace
         {
             Client client;
             parser.process(server, client, "PASS testpass");
-            parser.process(server, client, "NICK pinguser");
-            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            parser.process(server, client, "NICK pinguser4");
+            parser.process(server, client, "USER pinguser4 0 * :Ping User");
+            check(client.isRegistered() == true, "setup: pinguser4 registered successfully");
             client.getOutBuffer().clear();
 
             parser.process(server, client, "PING server1 :unknown_server");
@@ -429,8 +433,9 @@ namespace
         {
             Client client;
             parser.process(server, client, "PASS testpass");
-            parser.process(server, client, "NICK pinguser");
-            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            parser.process(server, client, "NICK pinguser5");
+            parser.process(server, client, "USER pinguser5 0 * :Ping User");
+            check(client.isRegistered() == true, "setup: pinguser5 registered successfully");
             client.getOutBuffer().clear();
 
             std::string serverName = getServerName();
@@ -443,8 +448,9 @@ namespace
         {
             Client client;
             parser.process(server, client, "PASS testpass");
-            parser.process(server, client, "NICK pinguser");
-            parser.process(server, client, "USER pinguser 0 * :Ping User");
+            parser.process(server, client, "NICK pinguser6");
+            parser.process(server, client, "USER pinguser6 0 * :Ping User");
+            check(client.isRegistered() == true, "setup: pinguser6 registered successfully");
             client.getOutBuffer().clear();
 
             std::string upperServerName = Utils::toUpper(getServerName());
