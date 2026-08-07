@@ -9,34 +9,33 @@
 #include "parser/commands/Pass.hpp"
 #include "parser/commands/Nick.hpp"
 #include "parser/commands/User.hpp"
-// #include "parser/commands/Ping.hpp"
-// #include "parser/commands/Pong.hpp"
-// #include "parser/commands/Quit.hpp"
-// #include "parser/commands/Join.hpp"
-// #include "parser/commands/Part.hpp"
-// #include "parser/commands/Kick.hpp"
-// #include "parser/commands/Invite.hpp"
-// #include "parser/commands/Topic.hpp"
-// #include "parser/commands/Mode.hpp"
-// #include "parser/commands/Privmsg.hpp"
-// #include "parser/commands/Notice.hpp"
+#include "parser/commands/Ping.hpp"
+#include "parser/commands/Pong.hpp"
+#include "parser/commands/Quit.hpp"
+
+#include "channel/commands/Invite.hpp"
+#include "channel/commands/Join.hpp"
+#include "channel/commands/Kick.hpp"
+#include "channel/commands/Mode.hpp"
+#include "channel/commands/Part.hpp"
+#include "channel/commands/Privmsg.hpp"
+#include "channel/commands/Topic.hpp"
 
 Parser::Parser()
 {
     registerCommand("PASS", new Pass());
     registerCommand("NICK", new Nick());
     registerCommand("USER", new User());
-    // registerCommand("PING", new Ping());
-    // registerCommand("PONG", new Pong());
-    // registerCommand("QUIT", new Quit());
-    // registerCommand("JOIN", new Join());
-    // registerCommand("PART", new Part());
-    // registerCommand("KICK", new Kick());
-    // registerCommand("INVITE", new Invite());
-    // registerCommand("TOPIC", new Topic());
-    // registerCommand("MODE", new Mode());
-    // registerCommand("PRIVMSG", new Privmsg());
-    // registerCommand("NOTICE", new Notice());
+    registerCommand("PING", new Ping());
+    registerCommand("PONG", new Pong());
+    registerCommand("QUIT", new Quit());
+    registerCommand("INVITE", new Invite());
+    registerCommand("JOIN", new Join());
+    registerCommand("KICK", new Kick());
+    registerCommand("MODE", new Mode());
+    registerCommand("PART", new Part());
+    registerCommand("PRIVMSG", new Privmsg());
+    registerCommand("TOPIC", new Topic());
 }
 
 Parser::~Parser()

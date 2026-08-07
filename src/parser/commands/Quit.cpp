@@ -15,7 +15,10 @@ Quit::~Quit() {}
 void Quit::execute(Server& server, Client& client, const Message& msg)
 {
     if (!client.getNickname().empty())
+    {
         server.releaseNickname(client.getNickname());
+        client.setNickname("");
+    }
 
     std::string reason = msg.hasTrailing() ? msg.getTrailing() : "Leaving";
     client.appendToOutBuffer("ERROR :Closing Link: " + reason + "\r\n");

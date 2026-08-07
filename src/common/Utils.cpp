@@ -112,6 +112,14 @@ namespace Utils
         return c;
     }
 
+    std::string toIRCLower(const std::string& s)
+    {
+        std::string result = s;
+        for (std::string::size_type i = 0; i < result.size(); ++i)
+            result[i] = toIRCLower(result[i]);
+        return result;
+    }
+
     bool isSameNickname(const std::string& n1, const std::string& n2)
     {
         if (n1.size() != n2.size())

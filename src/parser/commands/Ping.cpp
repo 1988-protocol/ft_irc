@@ -2,6 +2,7 @@
 #include "parser/Message.hpp"
 #include "client/Client.hpp"
 #include "server/Server.hpp"
+#include "common/Replies.hpp"
 #include "common/Utils.hpp"
 
 Ping::Ping() {}
@@ -13,16 +14,36 @@ Ping& Ping::operator=(const Ping& other)
 }
 Ping::~Ping() {}
 
-// RFC1459 4.6.2 PING: 클라이언트가 보낸 토큰을 그대로 PONG으로 돌려줘 연결이 살아있음을
-// 확인시켜준다. numeric reply가 아니라 별도 커맨드 응답이라 reply() 헬퍼를 쓰지 않고
-// 직접 라인을 만든다. 서버가 유휴 클라이언트에게 먼저 PING을 보내는 능동적 헬스체크는
-// poll() 타이머를 다루는 Network의 몫이라 여기서는 다루지 않는다.
+// RFC1459 4.6.2 / RFC2812 3.7.2 PING:
+// Parameters: <server1> [<server2>]
+// 1. 파라미터가 없는 경우: 409 ERR_NOORIGIN (:No origin specified)
+// 2. 파라미터 위치 보존: middle 파라미터목록과 trailing 파라미터를 순서대로 연결하여 index로 접근.
+// 3. server2 (두 번째 파라미터) 처리: 2개 이상일 때 server2가 본인 서버 이름과 일치하지 않으면 402 ERR_NOSUCHSERVER
 void Ping::execute(Server& server, Client& client, const Message& msg)
 {
     (void)server;
-    std::string token = msg.hasTrailing() ? msg.getTrailing()
-        : (msg.getParams().empty() ? "" : msg.getParams()[0]);
+    std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
-    // [Change] queueReply() 대신 real Client의 appendToOutBuffer() 사용
+    std::vector<std::string> params = msg.getParams();
+    if (msg.hasTrailing())
+    {
+        params.push_back(msg.getTrailing());
+    }
+
+    if (params.empty())
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NOORIGIN, target, ":No origin specified"));
+        return;
+    }
+
+    // RFC 1123 Section 2.1 & RFC 1459 Section 2.2:
+    // 호스트명 및 IRC 서버 식별자(servername)는 대소문자를 구분하지 않음 (Case-insensitive).
+    if (params.size() >= 2 && Utils::toUpper(params[1]) != Utils::toUpper(getServerName()))
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHSERVER, target, params[1] + " :No such server"));
+        return;
+    }
+
+    std::string token = params[0];
     client.appendToOutBuffer(":" + getServerName() + " PONG " + getServerName() + " :" + token + "\r\n");
 }

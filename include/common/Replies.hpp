@@ -7,6 +7,8 @@
 namespace Numeric
 {
     const int RPL_WELCOME          = 1;    // 등록 완료(PASS+NICK+USER 모두 성공) 시 1회 전송
+    const int ERR_NOSUCHSERVER     = 402;  // 해당 서버가 존재하지 않음
+    const int ERR_NOORIGIN         = 409;  // PING/PONG 시 origin 파라미터 미지정
     const int ERR_UNKNOWNCOMMAND   = 421;  // 디스패처가 map에서 커맨드를 못 찾았을 때
     const int ERR_NONICKNAMEGIVEN  = 431;  // NICK 인자 없음
     const int ERR_ERRONEUSNICKNAME = 432;  // NICK 형식 위반(허용 문자 외)

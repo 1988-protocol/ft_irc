@@ -52,6 +52,8 @@ void Message::setTrailing(const std::string& trailing)
 //   message    = [ ":" prefix SPACE ] command [ params ] crlf
 //   params     = *14( SPACE middle ) [ SPACE ":" trailing ]
 //              =/ 14( SPACE middle ) [ SPACE [ ":" ] trailing ]
+// <middle>   ::= <Any non-empty sequence of octets not including SPACE or NUL or CR or LF, the first of which may not be ':'>
+// <trailing> ::= <Any sequence of octets not including NUL or CR or LF>
 //
 // 커맨드/파라미터 사이의 공백은 코드상 다중 공백이 와도 하나의 구분자로 취급한다
 // (pre_plan.md Phase1 "중복 공백" 엣지 케이스) — Utils::split이 이를 처리한다.
@@ -61,64 +63,86 @@ void Message::setTrailing(const std::string& trailing)
 Message Message::parse(const std::string& rawLine)
 {
     Message msg;
+
+    // [보완] 줄 끝에 \r이 남아있다면 방어적으로 제거하여 파서 자체의 독립성 확보
+    std::string line = rawLine;
+    if (!line.empty() && line[line.size() - 1] == '\r')
+    {
+        line.erase(line.size() - 1);
+    }
+
+    // NUL 문자 검증 (Note 4) - 보안 취약점 차단 및 Fail-Fast
+    // 네트워크 단에서 처리하게 된 경우 여기 if문 제거
+    // 2. NUL('\0') 또는 내부 '\r' 존재 시 즉시 거부 (Fail-Fast)
+    if (line.find('\0') != std::string::npos || line.find('\r') != std::string::npos)
+    {
+        return msg;
+    }
     
-    // 1. 전체 라인의 유효 구간(Trim 적용할 실제 경계)을 인덱스로만 탐색합니다.
-    // 임시 문자열을 생성하지 않으므로 오버헤드가 0입니다.
-    std::string::size_type start = rawLine.find_first_not_of(' ');
-    if (start == std::string::npos)
+    // 1. 전체 라인의 유효 구간(선행 공백 제외)을 찾습니다.
+    std::string::size_type i = line.find_first_not_of(' ');
+    if (i == std::string::npos)
         return msg; // 공백만 있는 줄은 즉시 빈 메시지 반환
-        
-    std::string::size_type end = rawLine.find_last_not_of(' ');
 
     // 2. Prefix 파싱 (첫 글자가 ':' 인지 경계 검사)
-    if (rawLine[start] == ':')
+    if (line[i] == ':')
     {
-        // prefix는 첫 공백 전까지입니다.
-        std::string::size_type space = rawLine.find(' ', start);
-        if (space == std::string::npos || space > end) // ":Harry", ":Harry    "
+        std::string::size_type next_space = line.find(' ', i);
+        if (next_space == std::string::npos)
         {
             // command가 없는 비정상 메시지. prefix만 담아 반환
-            msg.setPrefix(rawLine.substr(start + 1, end - start)); // :다음부터 -> 이름만 prefix로 반환
-            return msg; // 여기서 끝내줌
+            msg.setPrefix(line.substr(i + 1));
+            return msg;
         }
-        msg.setPrefix(rawLine.substr(start + 1, space - (start + 1))); // 스페이스 전까지 -> prefix
+        msg.setPrefix(line.substr(i + 1, next_space - (i + 1)));
         
         // 다음 파싱할 시작점을 공백 뒤의 유효한 문자로 이동
-        start = rawLine.find_first_not_of(' ', space + 1); // start위치 바꿈
+        i = line.find_first_not_of(' ', next_space);
     }
+    if (i == std::string::npos)
+        return msg;
 
-    // 3. Trailing 파싱 (유효 구간 내에서 " :" 마커 탐색)
-    std::string::size_type trailingMarker = rawLine.find(" :", start);
-    std::string::size_type middleEnd = end;
-    std::string::size_type trailingStart = std::string::npos;
-    bool foundTrailing = false;
-
-    // 마커가 유효 범위 내에 있을 때만 처리
-    if (trailingMarker != std::string::npos && trailingMarker < end)
+    // 3. Command 파싱
+    std::string::size_type cmd_end = line.find(' ', i);
+    if (cmd_end == std::string::npos)
     {
-        middleEnd = trailingMarker - 1;       // " :" 직전 문자까지가 middle 영역
-        trailingStart = trailingMarker + 2;   // " :" 직후 문자부터가 trailing 영역
-        foundTrailing = true;
+        msg.setCommand(line.substr(i));
+        return msg;
     }
+    msg.setCommand(line.substr(i, cmd_end - i));
+    i = line.find_first_not_of(' ', cmd_end);
 
-    // 4. Middle 구간 토큰화
-    if (start <= middleEnd)
+    // 4. Params 파싱 루프 (최대 14개 수집)
+    while (i != std::string::npos && msg.getParams().size() < 14)
     {
-        // split에 필요한 부분만 최소한으로 substr합니다.
-        std::string middlePart = rawLine.substr(start, middleEnd - start + 1);
-        std::vector<std::string> tokens = Utils::split(middlePart, ' ');
-        if (!tokens.empty())
+        // 공백 뒤에 바로 ':'이 오면 trailing 마커입니다.
+        // 콜론 뒤의 모든 문자를 trailing으로 저장 (빈 문자열 ":" 만 전송된 경우도 hasTrailing() == true 처리)
+        if (line[i] == ':')
         {
-            msg.setCommand(tokens[0]);
-            for (std::vector<std::string>::size_type i = 1; i < tokens.size(); ++i)
-                msg.addParam(tokens[i]);
+            msg.setTrailing(line.substr(i + 1));
+            return msg;
         }
+        std::string::size_type param_end = line.find(' ', i);
+        if (param_end == std::string::npos)
+        {
+            msg.addParam(line.substr(i));
+            return msg;
+        }
+        msg.addParam(line.substr(i, param_end - i));
+        i = line.find_first_not_of(' ', param_end);
     }
 
-    // 5. Trailing 값 대입
-    if (foundTrailing)
+    // 5. 15번째 파라미터 (자동 Trailing) 처리 (RFC 1459 2.3.1 규격)
+    if (i != std::string::npos)
     {
-        msg.setTrailing(rawLine.substr(trailingStart, end - trailingStart + 1));
+        if (line[i] == ':')
+        {
+            msg.setTrailing(line.substr(i + 1));
+        }
+        else
+        {
+            msg.setTrailing(line.substr(i));
+        }
     }
 
     return msg;
