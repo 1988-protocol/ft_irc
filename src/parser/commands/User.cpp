@@ -30,6 +30,8 @@ void User::execute(Server& server, Client& client, const Message& msg)
         return;
     }
     // 이 부분은 체크 필요함, 왜냐하면 real_name이 들어가지 않아서 정말 4개가 필요하지 않을수도?
+    // 인자 부족(461 ERR_NEEDMOREPARAMS) 시 에러 응답 후 세션을 끊지 않고 리턴하여
+    // 클라이언트가 올바른 USER 파라미터를 재전송할 때까지 인증 대기 상태를 유지합니다.
     if (msg.getParams().size() != 3 || !msg.hasTrailing())
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "USER :Not enough parameters"));

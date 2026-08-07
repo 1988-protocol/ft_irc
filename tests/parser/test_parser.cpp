@@ -459,6 +459,85 @@ namespace
                 "ping: PING with case-insensitive server2 replies PONG correctly");
         }
     }
+
+    void testRegistrationErrorRecovery()
+    {
+        Parser parser;
+        Server server(6667, "testpass");
+
+        // 시나리오 1: PASS 틀림 -> 세션 유지 및 미등록 상태 -> 올바른 PASS 전송 후 NICK/USER 수신 시 정상 등록
+        {
+            Client client;
+            parser.process(server, client, "PASS wrongpass");
+            check(client.getOutBuffer().find(" 464 ") != std::string::npos, "recovery: wrong PASS returns 464");
+            check(client.needsDisconnect() == false, "recovery: wrong PASS keeps session alive");
+            check(client.isRegistered() == false, "recovery: wrong PASS leaves client unregistered");
+
+            client.getOutBuffer().clear();
+            parser.process(server, client, "PASS testpass");
+            check(client.hasCorrectPassword() == true, "recovery: resending correct PASS succeeds");
+
+            parser.process(server, client, "NICK passuser");
+            parser.process(server, client, "USER passuser 0 * :Pass User");
+            check(client.isRegistered() == true, "recovery: registration completes after correcting PASS");
+            check(client.getOutBuffer().find(" 001 ") != std::string::npos, "recovery: receives 001 RPL_WELCOME after correcting PASS");
+        }
+
+        // 시나리오 2: NICK 형식 오류 -> 세션 유지 및 닉네임 미설정 -> 올바른 NICK 전송 후 정상 등록
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK 1badnick");
+            check(client.getOutBuffer().find(" 432 ") != std::string::npos, "recovery: malformed NICK returns 432");
+            check(client.needsDisconnect() == false, "recovery: malformed NICK keeps session alive");
+            check(client.getNickname().empty(), "recovery: malformed NICK leaves nickname empty");
+            check(client.isRegistered() == false, "recovery: malformed NICK leaves client unregistered");
+
+            client.getOutBuffer().clear();
+            parser.process(server, client, "USER nickuser 0 * :Nick User");
+            check(client.isRegistered() == false, "recovery: USER before valid NICK leaves client unregistered");
+
+            parser.process(server, client, "NICK validnick");
+            check(client.getNickname() == "validnick", "recovery: resending valid NICK sets nickname");
+            check(client.isRegistered() == true, "recovery: registration completes upon receiving valid NICK");
+            check(client.getOutBuffer().find(" 001 ") != std::string::npos, "recovery: receives 001 RPL_WELCOME upon valid NICK");
+        }
+
+        // 시나리오 3: USER 파라미터 부족 -> 세션 유지 -> 올바른 USER 전송 후 정상 등록
+        {
+            Client client;
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK usernick");
+            parser.process(server, client, "USER incomplete");
+            check(client.getOutBuffer().find(" 461 ") != std::string::npos, "recovery: incomplete USER returns 461");
+            check(client.needsDisconnect() == false, "recovery: incomplete USER keeps session alive");
+            check(client.getUsername().empty(), "recovery: incomplete USER leaves username empty");
+            check(client.isRegistered() == false, "recovery: incomplete USER leaves client unregistered");
+
+            client.getOutBuffer().clear();
+            parser.process(server, client, "USER usernick 0 * :User Real Name");
+            check(client.getUsername() == "usernick", "recovery: resending valid USER sets username");
+            check(client.isRegistered() == true, "recovery: registration completes upon receiving valid USER");
+            check(client.getOutBuffer().find(" 001 ") != std::string::npos, "recovery: receives 001 RPL_WELCOME upon valid USER");
+        }
+
+        // 시나리오 4: 연쇄 오류 발생 후 교정을 통한 최종 정상 등록
+        {
+            Client client;
+            parser.process(server, client, "PASS wrong1"); // 464
+            parser.process(server, client, "NICK @badnick"); // 432
+            parser.process(server, client, "USER baduser"); // 461
+            check(client.needsDisconnect() == false, "recovery: multi-error keeps session alive");
+            check(client.isRegistered() == false, "recovery: multi-error leaves client unregistered");
+
+            client.getOutBuffer().clear();
+            parser.process(server, client, "PASS testpass");
+            parser.process(server, client, "NICK combouser");
+            parser.process(server, client, "USER combouser 0 * :Combo User");
+            check(client.isRegistered() == true, "recovery: multi-error client fully registers after sending valid commands");
+            check(client.getOutBuffer().find(" 001 ") != std::string::npos, "recovery: receives 001 RPL_WELCOME after full recovery");
+        }
+    }
 }
 
 int main()
@@ -468,6 +547,7 @@ int main()
     testAdditionalErrorPaths();
     testNicknameLifecycleRegressions();
     testPingCommandValidation();
+    testRegistrationErrorRecovery();
 
     std::cout << "----" << std::endl;
     if (g_failureCount == 0)

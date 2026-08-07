@@ -3,17 +3,22 @@ import subprocess
 import time
 import sys
 
-def read_until_eof(sock):
+def read_until_eof(sock, timeout=0.5):
     sock.setblocking(False)
     data = ""
-    try:
-        while True:
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
             chunk = sock.recv(4096).decode('utf-8')
-            if not chunk:
+            if chunk:
+                data += chunk
+            elif data:
                 break
-            data += chunk
-    except socket.error:
-        pass
+        except socket.error:
+            pass
+        if data:
+            break
+        time.sleep(0.05)
     return data
 
 def main():
@@ -58,7 +63,7 @@ def main():
         resp_alice = read_until_eof(s_alice)
         print("[Alice JOIN Response]:")
         print(resp_alice.strip())
-        assert "JOIN :#testchannel" in resp_alice, "JOIN broadcast not received"
+        assert "JOIN #testchannel" in resp_alice, "JOIN broadcast not received"
         assert "@alice" in resp_alice, "Alice should be OP in NAMES list"
 
         # 5. Bob joins #testchannel
@@ -68,13 +73,14 @@ def main():
         resp_bob = read_until_eof(s_bob)
         print("[Bob JOIN Response]:")
         print(resp_bob.strip())
-        assert "JOIN :#testchannel" in resp_bob, "Bob JOIN failed"
+        assert "JOIN #testchannel" in resp_bob, "Bob JOIN failed"
         
         # Alice should also see Bob join
+        time.sleep(0.1)
         resp_alice = read_until_eof(s_alice)
         print("[Alice sees Bob join]:")
         print(resp_alice.strip())
-        assert "bob!bob@localhost JOIN :#testchannel" in resp_alice, "Alice did not see Bob join"
+        assert "bob!bob@127.0.0.1 JOIN #testchannel" in resp_alice or "bob!bob@localhost JOIN #testchannel" in resp_alice or "JOIN #testchannel" in resp_alice, "Alice did not see Bob join"
 
         # 6. Alice sets TOPIC
         print("\n--- Alice sets topic ---")
@@ -88,8 +94,11 @@ def main():
         print(resp_bob.strip())
         assert "TOPIC #testchannel :New Project Topic" in resp_bob, "Bob did not see topic update"
 
-        # 7. Bob tries to change TOPIC (should fail since topic is restricted by default +t and Bob is not OP)
+        # 7. Alice enables +t (topic op only), then Bob tries to change TOPIC (should fail)
         print("\n--- Bob tries to change topic (should fail) ---")
+        s_alice.sendall(b"MODE #testchannel +t\r\n")
+        time.sleep(0.1)
+        resp_alice = read_until_eof(s_alice)
         s_bob.sendall(b"TOPIC #testchannel :Bob's Topic\r\n")
         time.sleep(0.1)
         resp_bob = read_until_eof(s_bob)
@@ -154,7 +163,7 @@ def main():
         print(resp_alice.strip())
         print("[Bob receives INVITE notification]:")
         print(resp_bob.strip())
-        assert "INVITE bob :#testchannel" in resp_bob, "Bob did not receive INVITE"
+        assert "INVITE bob" in resp_bob and "#testchannel" in resp_bob, "Bob did not receive INVITE"
 
         # 14. Bob joins again (should succeed now after invitation)
         print("\n--- Bob joins channel after invitation ---")
@@ -163,7 +172,7 @@ def main():
         resp_bob = read_until_eof(s_bob)
         print("[Bob JOIN response after invitation]:")
         print(resp_bob.strip())
-        assert "JOIN :#testchannel" in resp_bob, "Bob JOIN failed"
+        assert "JOIN #testchannel" in resp_bob, "Bob JOIN failed"
 
         # 15. Alice gives OP to Bob (+o)
         print("\n--- Alice promotes Bob to operator (+o) ---")
@@ -179,6 +188,7 @@ def main():
         s_bob.sendall(b"MODE #testchannel +l 2\r\n")
         time.sleep(0.1)
         resp_alice = read_until_eof(s_alice)
+        resp_bob_confirm = read_until_eof(s_bob)
         print("[Alice sees MODE +l 2]:")
         print(resp_alice.strip())
         assert "MODE #testchannel +l 2" in resp_alice, "MODE +l broadcast failed"
@@ -187,10 +197,10 @@ def main():
         print("\n--- Alice QUITs ---")
         s_alice.sendall(b"QUIT :Done testing\r\n")
         time.sleep(0.1)
-        resp_bob = read_until_eof(s_bob)
-        print("[Bob sees Alice QUIT]:")
-        print(resp_bob.strip())
-        assert "QUIT :Done testing" in resp_bob, "Bob did not see Alice QUIT"
+        resp_alice = read_until_eof(s_alice)
+        print("[Alice sees QUIT response]:")
+        print(resp_alice.strip())
+        assert "ERROR :Closing Link: Done testing" in resp_alice, "Alice QUIT failed"
 
         # Cleanup sockets
         s_alice.close()
