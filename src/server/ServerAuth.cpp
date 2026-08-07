@@ -8,21 +8,15 @@ const std::string& Server::getPassword() const
 
 bool Server::isNicknameInUse(const std::string& nickname) const
 {
-    for (std::map<std::string, Client*>::const_iterator it = m_nicknames.begin();
-        it != m_nicknames.end(); ++it)
-    {
-        if (it->second != NULL && Utils::isSameNickname(it->first, nickname))
-            return true;
-    }
-    return false;
+    return m_nicknames.find(Utils::toIRCLower(nickname)) != m_nicknames.end();
 }
 
 void Server::registerNickname(const std::string& nickname, Client& client)
 {
-    m_nicknames[nickname] = &client;
+    m_nicknames[Utils::toIRCLower(nickname)] = &client;
 }
 
 void Server::releaseNickname(const std::string& nickname)
 {
-    m_nicknames.erase(nickname);
+    m_nicknames.erase(Utils::toIRCLower(nickname));
 }
