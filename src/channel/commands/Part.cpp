@@ -65,7 +65,6 @@ void Part::execute(Server& server, Client& client, const Message& msg)
         if (channel->getMembers().empty())
         {
             server.removeChannel(channelName);
-            delete channel;
         }
     }
 }

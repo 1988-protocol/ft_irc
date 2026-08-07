@@ -6,11 +6,11 @@
 
 Client::Client() : m_fd(-1), m_ip(""), m_inBuffer(""), m_outBuffer(""),
                     m_markedForDeletion(false), m_registered(false), m_hasCorrectPassword(false),
-                    m_nickname(""), m_username(""), m_realname(""), m_hostname(""), m_servername("") {}
+                    m_nickname(""), m_username(""), m_hostname(""), m_servername("") {}
 
 Client::Client(int fd, std::string ip) : m_fd(fd), m_ip(ip), m_inBuffer(""), m_outBuffer(""),
                             m_markedForDeletion(false), m_registered(false), m_hasCorrectPassword(false),
-                            m_nickname(""), m_username(""), m_realname(""), m_hostname(""), m_servername("") {}
+                            m_nickname(""), m_username(""), m_hostname(""), m_servername("") {}
 
 Client::Client(const Client& other)
 {
@@ -31,7 +31,6 @@ Client& Client::operator=(const Client& other)
         this->m_hasCorrectPassword = other.m_hasCorrectPassword;
         this->m_nickname = other.m_nickname;
         this->m_username = other.m_username;
-        this->m_realname = other.m_realname;
         this->m_hostname = other.m_hostname;
         this->m_servername = other.m_servername;
     }
