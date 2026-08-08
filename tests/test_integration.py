@@ -1,25 +1,11 @@
+import os
+import sys
 import socket
 import subprocess
 import time
-import sys
 
-def read_until_eof(sock, timeout=0.5):
-    sock.setblocking(False)
-    data = ""
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        try:
-            chunk = sock.recv(4096).decode('utf-8')
-            if chunk:
-                data += chunk
-            elif data:
-                break
-        except socket.error:
-            pass
-        if data:
-            break
-        time.sleep(0.05)
-    return data
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from test_utils import read_until_eof
 
 def main():
     print("=== Starting IRC Integration Test ===")
