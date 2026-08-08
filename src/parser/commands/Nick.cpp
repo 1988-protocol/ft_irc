@@ -19,6 +19,14 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
 {
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
+    // TODO(팀 논의 필요): Message 캡슐화(getParamCount / getParam) 합의 시 아래 코드로 대체 가능:
+    // if (msg.getParamCount() < 1)
+    // {
+    //     client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
+    //     return;
+    // }
+    // const std::string& nickname = msg.getParam(0);
+
     if (msg.getParams().empty())
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
@@ -30,6 +38,8 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
     if (Utils::isSameNickname(nickname, client.getNickname()))
         return; // 이미 쓰고 있는 닉네임과 동일 (RFC1459 대소문자/특수문자 무시) — 에러 아님, 무시
 
+    // NICK 파라미터 누락, 유효하지 않은 문자열(ERR_ERRONEUSNICKNAME 432), 닉네임 중복(ERR_NICKNAMEINUSE 433)
+    // 발생 시 에러 응답 후 세션을 유지(markForDeletion 미호출)하고 닉네임을 변경하지 않아 인증 대기 상태를 유지합니다.
     if (!Utils::isValidNickname(nickname))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_ERRONEUSNICKNAME, target, nickname + " :Erroneous nickname"));

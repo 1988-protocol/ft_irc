@@ -70,17 +70,23 @@ re: fclean all
 TEST_NAME   = test_parser
 TEST_SRCS   = $(filter-out main.cpp, $(SRCS))
 
+# 1. 표준 RFC 1459 테스트 (단위 테스트 + 표준 통합 테스트)
 test: $(NAME)
 	@echo "==> Parser 단위/통합 테스트 빌드 중..."
 	$(CXX) $(CXXFLAGS) tests/parser/test_parser.cpp $(addprefix $(SRC_DIR)/, $(TEST_SRCS)) -o $(TEST_NAME)
 	@echo "==> 1. $(TEST_NAME) 실행"
 	./$(TEST_NAME)
-	@echo "==> 2. test_integration.py 실행"
+	@echo "==> 2. test_integration.py (RFC 1459 규격) 실행"
 	python3 tests/test_integration.py
+
+# 2. Irssi 클라이언트 시뮬레이션 전용 테스트
+test_irssi: $(NAME)
+	@echo "==> test_integration_irssi.py (Irssi 클라이언트) 실행"
+	python3 tests/test_integration_irssi.py
 
 -include $(DEPS)
 
-.PHONY: all clean fclean re test
+.PHONY: all clean fclean re test test_irssi
 
 
 

@@ -30,7 +30,24 @@ void User::execute(Server& server, Client& client, const Message& msg)
         return;
     }
     // 이 부분은 체크 필요함, 왜냐하면 real_name이 들어가지 않아서 정말 4개가 필요하지 않을수도?
-    if (msg.getParams().size() != 3 || !msg.hasTrailing())
+    // 인자 부족(461 ERR_NEEDMOREPARAMS) 시 에러 응답 후 세션을 끊지 않고 리턴하여
+    // 클라이언트가 올바른 USER 파라미터를 재전송할 때까지 인증 대기 상태를 유지합니다.
+
+    // != 3 과 < 4 중 어느것을 해야 할 지 고민했는데요
+    // 최소 개수 이상의 파라미터가 들어오면 에러가 아니라 앞의 4개만 사용하고 남는 인자를 무시하는 것으로 처리하기 위해
+    // < 4 로 수정했습니다.
+
+
+    // TODO(팀 논의 필요): Message 캡슐화(getParamCount / getParam) 합의 시 아래 코드로 대체 가능:
+    // if (msg.getParamCount() < 4)
+    // {
+    //     client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "USER :Not enough parameters"));
+    //     return;
+    // }
+    // client.setUsername(msg.getParam(0));
+
+    size_t totalParams = msg.getParams().size() + (msg.hasTrailing() ? 1 : 0);
+    if (totalParams < 4)
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "USER :Not enough parameters"));
         return;

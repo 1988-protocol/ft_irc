@@ -158,4 +158,19 @@ Message Message::parse(const std::string& rawLine)
 // PREFIX (COMMAND PARAM)
 //              MIDDLE
 
+// TODO(팀 논의 필요): Message 파라미터 캡슐화 메서드 구현 예시
+// size_t Message::getParamCount() const
+// {
+//     return m_params.size() + (m_hasTrailing ? 1 : 0);
+// }
+//
+// std::string Message::getParam(size_t index) const
+// {
+//     if (index < m_params.size())
+//         return m_params[index];
+//     if (m_hasTrailing && index == m_params.size())
+//         return m_trailing;
+//     return "";
+// }
+
 
