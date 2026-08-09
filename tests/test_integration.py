@@ -16,6 +16,8 @@ def main():
     server_process = subprocess.Popen(["./ircserv", str(port), password], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     time.sleep(0.5) # Wait for server to bind and start listening
 
+    s_alice = None
+    s_bob = None
     try:
         # 2. Connect Alice (Client 1)
         s_alice = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -45,7 +47,7 @@ def main():
         assert "433" in resp_dup, "Expected 433 ERR_NICKNAMEINUSE for duplicate nickname"
 
         # Now Bob registers with unique nickname 'bob'
-        s_bob.sendall(f"NICK bob\r\nUSER bob 0 * :Bob Real\r\n".encode())
+        s_bob.sendall("NICK bob\r\nUSER bob 0 * :Bob Real\r\n".encode())
         time.sleep(0.1)
         resp = read_until_eof(s_bob)
         print("[Bob Registration Response]:")
@@ -197,31 +199,57 @@ def main():
         # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
         # assert "MODE #testchannel +l 2" in resp_alice, "MODE +l broadcast failed"
 
-        # 17. Alice QUITs
-        print("\n--- Alice QUITs ---")
-        s_alice.sendall(b"QUIT :Done testing\r\n")
-        time.sleep(0.1)
-        resp_alice = read_until_eof(s_alice)
-        print("[Alice sees QUIT response]:")
-        print(resp_alice.strip())
-        # Note: Requires flush-before-disconnect support in Server.cpp
-        # assert "ERROR :Closing Link: Done testing" in resp_alice, "Alice QUIT failed"
+        # 17. Ghost nickname test: 비정상 연결 종료 (QUIT 없이 소켓 강제 닫기)
+        # Alice가 QUIT 명령을 보내지 않고 TCP 연결이 끊기는 시나리오를 재현합니다.
+        # 이때 서버는 Quit::execute()를 거치지 않고 POLLHUP/EOF 경로로 Client를 정리해야 하며,
+        # 닉네임이 "고스트"로 남아있지 않아야 합니다.
+        print("\n--- Ghost nickname test: Alice socket closed without QUIT ---")
+        s_alice.close()
+        s_alice = None  # 이미 닫힌 소켓 재닫기 방지용 플래그
+        time.sleep(0.5)  # 서버가 poll()에서 POLLHUP/EOF를 감지하고 disconnectClient()를 실행할 시간
 
-        # 18. Bob acquires Alice's released nickname
-        print("\n--- Bob acquires released nickname 'alice' after Alice QUIT ---")
+        # 18. Bob이 Alice의 해제된 닉네임을 획득
+        print("\n--- Bob acquires released nickname 'alice' after abrupt disconnect ---")
         s_bob.sendall(b"NICK alice\r\n")
         time.sleep(0.1)
         resp_nick_take = read_until_eof(s_bob)
         print("[Bob NICK alice Response]:")
         print(resp_nick_take.strip())
-        assert "433" not in resp_nick_take, "Bob should be able to take released nickname"
+        assert "433" not in resp_nick_take, "Ghost nickname: server still thinks 'alice' is in use after abrupt disconnect"
+
+        # 19. 후속 검증: 닉네임 변경이 실제로 반영되었는지 양성(positive) 확인
+        # "433이 응답에 없다"만으로는 빈 응답(서버 무응답)도 통과하므로,
+        # 변경된 닉네임으로 후속 명령을 보내 서버가 정상 응답하는지 확인합니다.
+        # TODO(Server.cpp): 현재 서버가 NICK 변경 성공 시 별도 응답(예: :oldnick!user@host NICK :newnick)을
+        #   보내지 않기 때문에, 후속 PRIVMSG 에러 응답으로 닉네임 반영을 간접 검증합니다.
+        print("\n--- Positive assertion: verify NICK change took effect ---")
+        s_bob.sendall(b"PRIVMSG nobody :ping\r\n")
+        time.sleep(0.1)
+        resp_confirm = read_until_eof(s_bob)
+        print("[Bob (now alice) PRIVMSG nobody Response]:")
+        print(resp_confirm.strip())
+        # 존재하지 않는 대상에게 PRIVMSG → 401 ERR_NOSUCHNICK "alice" 기준으로 응답해야 함
+        # 핵심: 서버가 Bob의 현재 닉네임을 "alice"로 인식하고 있다는 증거
+        assert "401" in resp_confirm, \
+            "Expected 401 ERR_NOSUCHNICK response to confirm server accepted NICK change (got empty or unexpected response)"
+        assert "alice" in resp_confirm, \
+            "Server should address the response to 'alice' (Bob's new nickname)"
 
         # Cleanup sockets
-        s_alice.close()
         s_bob.close()
         print("\n=== INTEGRATION TEST PASSED SUCCESSFULLY ===")
 
     finally:
+        # s_alice는 테스트 본문에서 이미 닫혔을 수 있으므로 안전하게 처리
+        if s_alice is not None:
+            try:
+                s_alice.close()
+            except Exception:
+                pass
+        try:
+            s_bob.close()
+        except Exception:
+            pass
         server_process.terminate()
         server_process.wait()
 

@@ -40,6 +40,8 @@ void Server::removeChannel(const std::string& channelName)
 // (함수 시그니처 및 반환값 인터페이스는 기존과 100% 동일하게 유지됩니다.)
 Client* Server::getClientByNick(const std::string& nickname)
 {
+    if (nickname.empty())
+        return NULL;
     for (std::map<int, Client*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
     {
         if (it->second && Utils::isSameNickname(it->second->getNickname(), nickname))
