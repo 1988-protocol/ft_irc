@@ -50,13 +50,8 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         client.appendToOutBuffer(reply(Numeric::ERR_NICKNAMEINUSE, target, nickname + " :Nickname is already in use"));
         return;
     }
-    // 여기는 Nick을 바꾸고 싶은 상황. 
-    // 닉네임의 검증을 새로운 콘테이너가 아닌 기존 콘테이너를 활용하는 방법을 활용하므로 관리로직이 불필요해졌다.
-    // 빈 클라이언트에 이름을 등록 중이라면 넘어간다.
-    if (!client.getNickname().empty())
-        server.releaseNickname(client.getNickname()); // 서버에 기존 닉네임 해제
-    server.registerNickname(nickname, client); // 서버에 닉네임 등록
-    client.setNickname(nickname); // 클라이언트 닉네임 설정
+    // 닉네임 설정 (m_clients가 single source of truth이므로 client.setNickname만으로 서버 전체에 즉시 반영)
+    client.setNickname(nickname);
 
     // 등록 부분
     // 등록되지 않았고, 클라이언트의 올바를 비밀번호이며, 유저 정보가 있다면.

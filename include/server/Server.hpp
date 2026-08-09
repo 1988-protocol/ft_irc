@@ -40,7 +40,6 @@ class Server{
 
         // Server Auth 관련 ────────────────────────────────────────────────────────
         Parser         m_parser;
-        std::map<std::string, Client*> m_nicknames;
 
         // Server cmds 관련────────────────────────────────────────────────────────
         std::map<std::string, Channel*> m_channels;
@@ -58,8 +57,6 @@ class Server{
         // Server Auth 관련 ────────────────────────────────────────────────────────
         const std::string& getPassword() const;
         bool isNicknameInUse(const std::string& nickname) const;
-        void registerNickname(const std::string& nickname, Client& client);
-        void releaseNickname(const std::string& nickname);
 
         //Server cmds 관련────────────────────────────────────────────────────────
         Channel* getChannel(const std::string& channelName);
