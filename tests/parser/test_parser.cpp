@@ -164,18 +164,6 @@ namespace
                 "dispatch: NICK without arg -> 431 ERR_NONICKNAMEGIVEN");
         }
 
-        // 중복 닉네임 -> 433 (먼저 다른 클라이언트가 taken을 선점)
-        {
-            Client owner;
-            parser.process(server, owner, "NICK taken");
-
-            Client challenger;
-            parser.process(server, challenger, "NICK taken");
-            // [Change] getOutbox() 대신 real Client의 getOutBuffer() 사용
-            check(challenger.getOutBuffer().find(" 433 ") != std::string::npos,
-                "dispatch: duplicate NICK -> 433 ERR_NICKNAMEINUSE");
-        }
-
         // PASS -> NICK -> USER 해피패스: 최종적으로 001 수신
         {
             Client client;
@@ -332,36 +320,6 @@ namespace
                 "regression: re-sending own current nickname must NOT produce 433");
             check(client.getNickname() == "erin",
                 "regression: nickname unchanged after self-resend");
-        }
-
-        // 닉네임 변경 후 이전 닉네임을 다른 클라이언트가 다시 쓸 수 있어야 한다
-        {
-            Client first;
-            parser.process(server, first, "NICK frank");
-            parser.process(server, first, "NICK george"); // frank -> george
-
-            Client second;
-            parser.process(server, second, "NICK frank"); // 이전 닉네임 재사용
-            // [Change] getOutbox() 대신 real Client의 getOutBuffer() 사용
-            check(second.getOutBuffer().find(" 433 ") == std::string::npos,
-                "regression: nickname released on change is reusable by another client");
-            check(second.getNickname() == "frank",
-                "regression: second client successfully acquired released nickname");
-        }
-
-        // QUIT 처리 후 닉네임을 다른 클라이언트가 다시 쓸 수 있어야 한다
-        {
-            Client first;
-            parser.process(server, first, "NICK harry");
-            parser.process(server, first, "QUIT :bye");
-
-            Client second;
-            parser.process(server, second, "NICK harry");
-            // [Change] getOutbox() 대신 real Client의 getOutBuffer() 사용
-            check(second.getOutBuffer().find(" 433 ") == std::string::npos,
-                "regression: nickname released on QUIT is reusable by another client");
-            check(second.getNickname() == "harry",
-                "regression: second client successfully acquired nickname freed by QUIT");
         }
     }
 

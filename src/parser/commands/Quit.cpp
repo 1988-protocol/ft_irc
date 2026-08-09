@@ -14,9 +14,9 @@ Quit::~Quit() {}
 
 void Quit::execute(Server& server, Client& client, const Message& msg)
 {
+    (void)server;
     if (!client.getNickname().empty())
     {
-        server.releaseNickname(client.getNickname());
         client.setNickname("");
     }
 

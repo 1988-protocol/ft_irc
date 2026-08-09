@@ -34,12 +34,16 @@ void Server::removeChannel(const std::string& channelName)
     }
 }
 
-// [changed 0807] m_nicknames를 정규화 키(IRC Lowercase)로 저장하므로
-// O(log N)의 std::map::find로 직접 조회합니다.
+// [Refactor Notice] 닉네임 동기화 불일치(댕글링 포인터/고스트 닉네임 버그) 방지를 위해
+// m_nicknames 맵을 제거하고, m_clients를 Single Source of Truth로 사용하여
+// O(N) 순회 방식으로 클라이언트를 조회하도록 변경되었습니다.
+// (함수 시그니처 및 반환값 인터페이스는 기존과 100% 동일하게 유지됩니다.)
 Client* Server::getClientByNick(const std::string& nickname)
 {
-    std::map<std::string, Client*>::iterator it = m_nicknames.find(Utils::toIRCLower(nickname));
-    if (it != m_nicknames.end())
-        return it->second;
+    for (std::map<int, Client*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
+    {
+        if (it->second && Utils::isSameNickname(it->second->getNickname(), nickname))
+            return it->second;
+    }
     return NULL;
 }
