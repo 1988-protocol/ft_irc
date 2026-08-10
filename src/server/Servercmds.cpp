@@ -1,4 +1,5 @@
 #include "server/Server.hpp"
+#include "client/Client.hpp"
 #include "channel/Channel.hpp"
 #include "common/Utils.hpp"
 
@@ -48,4 +49,17 @@ Client* Server::getClientByNick(const std::string& nickname)
             return it->second;
     }
     return NULL;
+}
+
+// 유저가 참여한 채널 개수 세는 함수
+// Server가 갖고 있는 m_channels을 순회하며 해당 클라이언트가 들어가 있는 채널 수를 카운팅
+size_t Server::getUserJoinedChannelCount(Client* client) const
+{
+    size_t count = 0;
+    for (std::map<std::string, Channel*>::const_iterator it = m_channels.begin(); it != m_channels.end(); ++it)
+    {
+        if (it->second && it->second->isMember(client))
+            count++;
+    }
+    return count;
 }
