@@ -31,9 +31,9 @@ public:
     const std::map<Client *, bool>& getMembers() const;
 
     void setTopic(std::string topic);
-    void addUser(Client *client);
-    void removeUser(Client *client);
-    bool isUserInChannel(Client* client) const;
+    void addMember(Client *client);
+    void removeMember(Client *client);
+    bool isMember(Client* client) const;
 
     // Key (+k) 관련
     bool isKeyModeActive() const;

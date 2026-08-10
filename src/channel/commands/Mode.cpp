@@ -28,7 +28,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     std::string channelName = params[0];
 
     // 파라미터 없거나 채널명이 아닐 경우 리턴
-    if (channelName.empty() || channelName[0] != '#')
+    if (channelName.empty() || (channelName[0] != '#' && channelName[0] != '&'))
         return;
 
     // 채널 존재 여부 확인
@@ -63,7 +63,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 명령 요청 유저가 채널 멤버인지 확인
-    if (!channel->isUserInChannel(&client)) {
+    if (!channel->isMember(&client)) {
         client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
         return;
     }
@@ -172,7 +172,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                     std::string targetNick = params[paramIdx++];
                     Client* targetClient = server.getClientByNick(targetNick);
                 
-                    if (!targetClient || !channel->isUserInChannel(targetClient))
+                    if (!targetClient || !channel->isMember(targetClient))
                     {
                         client.appendToOutBuffer(reply(Numeric::ERR_USERNOTINCHANNEL, target, targetNick + " " + channelName + " :They aren't on that channel"));
                         continue;

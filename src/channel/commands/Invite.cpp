@@ -48,7 +48,7 @@ void Invite::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 3. 초대한 주체(명령어를 실행한 client)가 해당 채널 멤버인지 검사
-    if (!channel->isUserInChannel(&client))
+    if (!channel->isMember(&client))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, clientNick, channelName + " :You're not on that channel"));
         return;
@@ -70,7 +70,7 @@ void Invite::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 6. 초대 대상 유저가 이미 채널에 있는지 검사
-    if (channel->isUserInChannel(targetClient))
+    if (channel->isMember(targetClient))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_USERONCHANNEL, clientNick, targetNick + " " + channelName + " :is already on channel"));
         return;

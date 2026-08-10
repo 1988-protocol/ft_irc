@@ -43,7 +43,7 @@ void Privmsg::execute(Server& server, Client& client, const Message& msg)
     {
         std::string targetName = targets[i];
         // 3. 수신 대상이 채널인 경우 ('#'으로 시작)
-        if (!targetName.empty() && targetName[0] == '#')
+        if (!targetName.empty() && (targetName[0] == '#' || targetName[0] == '&'))
         {
             Channel* channel = server.getChannel(targetName);
         
@@ -55,7 +55,7 @@ void Privmsg::execute(Server& server, Client& client, const Message& msg)
             }
 
             // 보낸 유저가 채널 멤버인지 검사
-            if (!channel->isUserInChannel(&client))
+            if (!channel->isMember(&client))
             {
                 client.appendToOutBuffer(reply(Numeric::ERR_CANNOTSENDTOCHAN, target, targetName + " :Cannot send to channel"));
                 continue;

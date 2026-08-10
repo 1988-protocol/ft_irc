@@ -38,7 +38,7 @@ void Part::execute(Server& server, Client& client, const Message& msg)
         }
 
         // 3. 유저가 채널 멤버인지 확인
-        if (!channel->isUserInChannel(&client))
+        if (!channel->isMember(&client))
         {
             client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
             continue;
@@ -58,8 +58,8 @@ void Part::execute(Server& server, Client& client, const Message& msg)
             it->first->appendToOutBuffer(buildMessage(client, "PART", channelName, reason));
         }
 
-        // 6. 채널 유저 및 방장/초대 목록 연쇄 제거 (removeUser 내부에서 연쇄 처리됨)
-        channel->removeUser(&client);
+        // 6. 채널 유저 및 방장/초대 목록 연쇄 제거 (removeMember 내부에서 연쇄 처리됨)
+        channel->removeMember(&client);
 
         // 7. 빈 방 삭제 처리
         if (channel->getMembers().empty())
