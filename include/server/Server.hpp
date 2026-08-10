@@ -37,6 +37,7 @@ class Server{
         
         void setSignal();
         void handleLine(Client *client, const std::string &line);
+        void updateWriteEvents();
 
         // Server Auth 관련 ────────────────────────────────────────────────────────
         Parser         m_parser;

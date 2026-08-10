@@ -97,9 +97,18 @@ void Server::run(){
             if(re & POLLOUT)
             {
                 if(m_clients.find(fd) != m_clients.end())
-                    sendToClient(fd);
+                {
+                    sendToClient(fd); //데이터 쓰기
+                    // 보내는 중 끊겨서 사라졌으면 인덱스 보정 후 넘어감
+                    if (m_clients.find(fd) == m_clients.end())
+                    {
+                        --i;
+                        continue;
+                    }
+                }
             }
         }
+        updateWriteEvents();
     }
     std::cout <<"\n[server] 종료합니다." << std::endl;
 }
@@ -189,7 +198,7 @@ void Server::receiveFromClient(int fd)
     while (client->extractLine(line))
         handleLine(client, line);
     
-    if (client->needsDisconnect())
+    if (!client->hasPendingOutput() && client->needsDisconnect())
         disconnectClient(fd);
 }
 
@@ -202,14 +211,10 @@ void    Server::handleLine(Client *client, const std::string &line)
     std::cout << "[recv fd " << client->getFd() << "]" << line << std::endl;
 
     m_parser.process(*this, *client, line);
-    //client->appendToOutBuffer(reply);
-    m_poll.setWritable(client->getFd(), true);
 
     // 디버깅용 출력
     if (!client->getNickname().empty())
         std::cout << "[recv fd " << client->getFd() << " ] nick: " << client->getNickname() << std::endl;
-    if (client->hasCorrectPassword())
-        std::cout << "[recv fd " << client->getFd() << " ] password correct " << std::endl;
 }
 
 void Server::sendToClient(int fd)
@@ -222,7 +227,6 @@ void Server::sendToClient(int fd)
 
     if (out.empty())
     {
-        m_poll.setWritable(fd, false);
         return;
     }
     ssize_t n = send(fd, out.c_str(), out.size(), 0);
@@ -236,11 +240,18 @@ void Server::sendToClient(int fd)
 
     out.erase(0, n);
 
-    if(out.empty())
+    if(out.empty() && client->needsDisconnect())
     {
-        m_poll.setWritable(client->getFd(), false);
-        if (client->needsDisconnect())
-            disconnectClient(fd);
+        disconnectClient(fd);
+    }
+}
+
+void Server::updateWriteEvents()
+{
+    for (std::map<int, Client*>::iterator it = m_clients.begin();
+        it != m_clients.end(); ++it)
+    {
+        m_poll.setWritable(it->first, it->second->hasPendingOutput());
     }
 }
 
