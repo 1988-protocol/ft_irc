@@ -142,7 +142,9 @@ namespace Utils
                 return false; // 첫 글자는 알파벳만 허용 (RFC1459 2.3.1)
             if (c >= '0' && c <= '9')
                 return true;
-            static const std::string specials = "-[]\\`^{}";
+            static const std::string specials = "-[]\\`^{}_|";
+            // rfc 1459에 의하면 _ , |는 불포함이었는데 irssi 에서 _를 기본적으로 추가하고 있어서 추가했습니다.
+            // rfc 근거가 아니라 reference client의 근거로 추가했습니다.
             return specials.find(c) != std::string::npos;
         }
     }
