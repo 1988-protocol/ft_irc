@@ -28,7 +28,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     std::string channelName = params[0];
 
     // 파라미터 없거나 채널명이 아닐 경우 리턴
-    if (channelName.empty() || channelName[0] != '#')
+    if (channelName.empty() || (channelName[0] != '#' && channelName[0] != '&'))
         return;
 
     // 채널 존재 여부 확인
