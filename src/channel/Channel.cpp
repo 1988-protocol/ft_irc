@@ -1,13 +1,10 @@
 #include "channel/Channel.hpp"
 #include "client/Client.hpp"
 
-// 생성자: 모든 멤버 변수를 안전하게 초기화
 Channel::Channel(std::string name)
     : m_name(name), m_topic(""), m_key(""), m_isInvite(false), m_isTopicOp(false), m_userLimit(0) {}
 
 Channel::~Channel() {}
-
-// --- Basic Getters & Setters ---
 
 std::string Channel::getName() const
 {
@@ -46,9 +43,9 @@ void Channel::setTopic(std::string topic)
     m_topic = topic;
 }
 
-// --- User Management ---
+// --- Member Management ---
 
-void Channel::addUser(Client* client)
+void Channel::addMember(Client* client)
 {
     if (!client)
         return;
@@ -56,7 +53,7 @@ void Channel::addUser(Client* client)
         m_members[client] = false;
 }
 
-void Channel::removeUser(Client* client)
+void Channel::removeMember(Client* client)
 {
     if (!client)
         return;
@@ -64,7 +61,7 @@ void Channel::removeUser(Client* client)
     removeInvite(client); // 초대 목록에서도 삭제
 }
 
-bool Channel::isUserInChannel(Client* client) const
+bool Channel::isMember(Client* client) const
 {
     return m_members.count(client) > 0;
 }
@@ -179,12 +176,12 @@ bool Channel::isOperator(Client* client) const
 
 void Channel::addOperator(Client* client)
 {
-    if (isUserInChannel(client))
+    if (isMember(client))
         m_members[client] = true;
 }
 
 void Channel::removeOperator(Client* client)
 {
-    if (isUserInChannel(client))
+    if (isMember(client))
         m_members[client] = false;
 }

@@ -34,7 +34,7 @@ void Topic::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 3. 요청 유저가 채널 멤버인지 확인
-    if (!channel->isUserInChannel(&client))
+    if (!channel->isMember(&client))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
         return;

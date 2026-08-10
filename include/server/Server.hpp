@@ -66,6 +66,8 @@ class Server{
         void addChannel(const std::string& channelName, Channel* channel);
         void removeChannel(const std::string& channelName);
         Client* getClientByNick(const std::string& nickname);
+        size_t getUserJoinedChannelCount(Client* client) const;
+
 
 };
 

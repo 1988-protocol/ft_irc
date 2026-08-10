@@ -37,7 +37,7 @@ void Kick::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 3. 명령 내린 sender가 채널 멤버인지 확인
-    if (!channel->isUserInChannel(&client))
+    if (!channel->isMember(&client))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
         return;
@@ -52,7 +52,7 @@ void Kick::execute(Server& server, Client& client, const Message& msg)
 
     // 5. 강퇴 대상(target) 존재 및 채널 참가 여부 확인
     Client* targetClient = server.getClientByNick(targetNick);
-    if (!targetClient || !channel->isUserInChannel(targetClient))
+    if (!targetClient || !channel->isMember(targetClient))
     {
         client.appendToOutBuffer(reply(Numeric::ERR_USERNOTINCHANNEL, target, targetNick + " " + channelName + " :They aren't on that channel"));
         return;
@@ -67,7 +67,7 @@ void Kick::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 7. 채널에서 target 제거 (Channel.cpp 내부에서 방장/초대 목록 연쇄 정리)
-    channel->removeUser(targetClient);
+    channel->removeMember(targetClient);
 
     // 8. 채널 소멸 검사 (빈 방 삭제)
     if (channel->getMembers().empty())
