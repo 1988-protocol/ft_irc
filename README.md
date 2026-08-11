@@ -1,172 +1,226 @@
 # ft_irc
 
-7.11 깃 세팅 도중 디렉토리를 어떻게 짜야 하는지를 문제로
-작성된 Readme입니다. <br>
-현재 내용은 참고만 하시고, 함께 모일 때 추가 모의를 진행할 예정입니다!
+> **RFC 1459 규격을 준수하는 C++98 기반 Internet Relay Chat (IRC) 서버**  
+> `poll()` 기반의 논블로킹 I/O 멀티플렉싱을 통해 다중 클라이언트의 동시 접속, 실시간 메시지 브로드캐스팅, 채널 관리 및 권한 제어를 지원합니다.
 
-## Build
+---
+
+## 📌 Requirements
+
+- **언어**: C++98
+- **컴파일러 & 플래그**: `c++` (`-Wall -Wextra -Werror -std=c++98`)
+- **I/O Multiplexing**: `poll()` 기반 논블로킹 소켓 I/O
+- **외부 라이브러리**: 표준 C++98 라이브러리만 사용 (Boost 등 외부 라이브러리 미사용)
+- **테스트 환경**: Python 3.x (통합 테스트 시)
+
+---
+
+## 🚀 Quick Start
+
+### 1. Build
+```bash
+make            # ircserv 실행 파일 빌드
+make clean      # 오브젝트 및 의존성 파일 삭제
+make fclean     # 생성된 바이너리 포함 전체 삭제
+make re         # 클린 재빌드
+```
+
+### 2. Run
+```bash
+./ircserv <port> <password>
+
+# 예시: 6667 포트, 비밀번호 '1234'로 서버 시작
+./ircserv 6667 1234
+```
+
+### 3. Connect & Test
+- **nc (Netcat) 사용**:
+  ```bash
+  nc 127.0.0.1 6667
+  PASS 1234
+  NICK mynick
+  USER mynick 0 * :My Name
+  ```
+- **표준 IRC 클라이언트 (Irssi)**:
+  ```bash
+  irssi -c 127.0.0.1 -p 6667 -w 1234 -n mynick
+  ```
+  또는
+  ```bash
+  irssi # 실행 후 아래 명령어 입력
+  /connect 127.0.0.1 6667 -password 1234
+  /nick mynick
+  ```
+
+---
+
+## 🤝 Collaboration & Conventions
+
+팀의 일관된 협업 흐름과 코드 품질 유지를 위해 상세 가이드를 마련했습니다.  
+작업 시작 전 아래 문서를 반드시 확인해 주세요!
+
+👉 **[상세 GitHub 협업 가이드 (docs/COLLABORATION_GUIDE.md)](docs/COLLABORATION_GUIDE.md)**  
+*(브랜치 전략, 커밋 룰, PR 템플릿, 코드 리뷰 가이드, 충돌 해결법 포함)*
+
+### 핵심 룰 요약 (Quick Rules)
+-  **직접 Push 금지**: `main`, `dev` 브랜치 직접 push 절대 금지
+-  **브랜치 흐름**: `dev` 최신화 ➔ `feature/<담당>-<기능>` / `fix/<담당>-<버그>` 생성 ➔ PR 생성 ➔ 리뷰 승인 후 `dev` 머지
+-  **PR 및 코드 리뷰**: 최소 1인 이상 Approve 필수 (`Squash and merge` 원칙)
+-  **커밋 컨벤션**: `<type>(<담당>): <설명>` (예: `feat(parser): PRIVMSG 파싱 구현`, `fix(network): poll 이벤트 누락 수정`)
+-  **공통 영역**: `include/common/` 및 `src/common/` 수정 시 팀원 3인 전원 합의 필수
+
+---
+
+## 🧱 Architecture & Data Flow
+
+`ft_irc`는 책임 분리를 위해 계층형(Layered) 아키텍처로 설계되었습니다.
+
+```mermaid
+flowchart TD
+    Client(["💻 Client (TCP Stream)"])
+
+    subgraph Network["1. Network Layer (Server / PollManager / Socket / Client)"]
+        direction TB
+        N1["• poll() 이벤트 감지 & 논블로킹 I/O<br>• 수신 버퍼 누적 & CRLF(\\r\\n) 기준 라인 분리"]
+    end
+
+    subgraph Parser["2. Parser Layer (Parser / Message)"]
+        direction TB
+        P1["• Prefix, Command, Params, Trailing 파싱<br>• 등록 시퀀스 (PASS ➔ NICK ➔ USER) 검증<br>• Command Dispatcher를 통한 실행 분기"]
+    end
+
+    subgraph Channel["3. Channel & Command Layer (Channel / ICommand)"]
+        direction TB
+        C1["• 채널 생성/입장/퇴장/초대/강퇴 제어<br>• 채널 모드 (+/- i, t, k, o, l) & 권한 검증<br>• PRIVMSG / NOTICE 브로드캐스팅 대상 계산"]
+    end
+
+    subgraph Delivery["4. Response & Delivery (Network Layer)"]
+        direction TB
+        D1["• 클라이언트별 outBuffer 송신 큐잉 (Partial Send 대응)<br>• POLLOUT 이벤트 시 소켓 전송"]
+    end
+
+    Client -->|"1. Raw Bytes (TCP)"| Network
+    Network -->|"2. Line Message (std::string)"| Parser
+    Parser -->|"3. Execute (ICommand)"| Channel
+    Channel -->|"4. Response / Broadcast"| Delivery
+    Delivery -->|"5. TCP Send"| Client
+```
+
+---
+
+## 📂 Directory Structure
+
+`include/`와 `src/`는 모듈별로 완벽하게 미러링된 구조를 갖습니다.
+
+```
+.
+├── Makefile
+├── README.md
+├── docs/
+│   ├── COLLABORATION_GUIDE.md   ← GitHub 협업 가이드
+│   ├── PLAN.md                  ← 3주 개발 일정 및 마일스톤
+│   └── todo.md                  ← 작업 체크리스트
+├── include/
+│   ├── client/
+│   │   └── Client.hpp           ← 클라이언트 상태 및 버퍼 관리
+│   ├── server/
+│   │   ├── Server.hpp           ← 서버 메인 컨트롤러
+│   │   ├── PollManager.hpp      ← pollfd 관리 및 이벤트 폴링
+│   │   └── Socket.hpp           ← 소켓 생성/바인딩/리스닝 래퍼
+│   ├── parser/
+│   │   ├── Parser.hpp           ← 메시지 파서 및 디스패처
+│   │   ├── Message.hpp          ← 파싱된 IRC 메시지 구조체
+│   │   └── commands/            ← Pass, Nick, User, Ping, Pong, Quit
+│   ├── channel/
+│   │   ├── Channel.hpp          ← 채널 상태/모드/멤버 관리
+│   │   └── commands/            ← Join, Part, Topic, Mode, Kick, Invite, Privmsg
+│   └── common/
+│       ├── ICommand.hpp         ← 커맨드 인터페이스
+│       ├── Replies.hpp          ← RFC 규격 응답 코드 상수
+│       └── Utils.hpp            ← 유틸리티 함수
+├── src/
+│   ├── main.cpp
+│   ├── client/
+│   │   └── Client.cpp
+│   ├── server/
+│   │   ├── Server.cpp
+│   │   ├── ServerAuth.cpp
+│   │   ├── Servercmds.cpp
+│   │   ├── PollManager.cpp
+│   │   └── Socket.cpp
+│   ├── parser/
+│   │   ├── Parser.cpp
+│   │   ├── Message.cpp
+│   │   └── commands/
+│   ├── channel/
+│   │   ├── Channel.cpp
+│   │   └── commands/
+│   └── common/
+│       └── Utils.cpp
+└── tests/
+    ├── parser/
+    ├── test_integration.py      ← RFC 1459 규격 통합 테스트
+    └── test_integration_irssi.py← Irssi 클라이언트 통합 테스트
+```
+
+---
+
+## ⚡ Supported Commands & Features
+
+### 1. Connection & Registration
+| Command | 설명 | 담당 |
+|---|---|---|
+| `PASS` | 서버 비밀번호 검증 | Parser |
+| `NICK` | 닉네임 설정 및 중복 검사 | Parser |
+| `USER` | 사용자 정보 등록 및 인증 완료 | Parser |
+| `PING` / `PONG` | 연결 활성 상태 확인 | Parser |
+| `QUIT` | 클라이언트 연결 종료 및 자원 정리 | Parser / Network |
+
+### 2. Channel Operations & Messaging
+| Command | 설명 | 담당 |
+|---|---|---|
+| `JOIN` | 채널 생성 또는 입장 (키/인원제한/초대전용 검증) | Channel |
+| `PART` | 채널 퇴장 | Channel |
+| `TOPIC` | 채널 주제 조회 및 변경 | Channel |
+| `MODE` | 채널 모드 변경 (`+/- i, t, k, o, l`) | Channel |
+| `KICK` | 채널에서 특정 유저 강제 퇴장 (오퍼레이터 전용) | Channel |
+| `INVITE` | 초대전용 채널에 유저 초대 (오퍼레이터 전용) | Channel |
+| `PRIVMSG` | 유저 1:1 메시지 전송 또는 채널 브로드캐스팅 | Channel / Parser |
+| `NOTICE` | 에러 응답이 없는 알림 메시지 전송 | Channel / Parser |
+
+### 3. Channel Modes
+- `+i` / `-i`: 초대 전용 채널 (Invite-only)
+- `+t` / `-t`: 오퍼레이터만 TOPIC 설정 가능
+- `+k` / `-k`: 채널 비밀번호(키) 설정 및 해제
+- `+o` / `-o`: 채널 오퍼레이터 권한 부여 및 회수
+- `+l` / `-l`: 채널 최대 참여 인원(User Limit) 제한 설정 및 해제
+
+---
+
+## 🧪 Testing
 
 ```bash
-make
-./ircserv <port> <password>
+# 1. 단위 테스트 + RFC 1459 규격 통합 테스트
+make test
+
+# 2. Irssi 클라이언트 호환성 통합 테스트
+make test_irssi
 ```
 
-## Requirements
+---
 
-- C++98
-- 컴파일 플래그: `-Wall -Wextra -Werror`
-- I/O 멀티플렉싱: `poll()` 또는 `epoll()`
+## 📅 Roadmap & Milestones
 
-## Team & Ownership
+- [x] **Week 1~2 (Interface & Skeleton)**: 소켓 논블로킹 I/O, `poll()` 이벤트 루프, 기본 메시지 파싱 및 등록 시퀀스
+- [x] **Week 3~4 (Core Features & Integration)**: 채널 생성/관리, 커맨드 핸들러 완성, 다중 클라이언트 1차 통합
+- [ ] **Week 5 (Edge Cases & QA)**: 모드 제어 세부 구현, 메모리/fd 누수 점검(`valgrind`), 방어 평가(Defense) 대비
 
-| 역할 | 담당 | 소유 디렉토리 | 소유 클래스 | 소유 커맨드 |
-|---|---|---|---|---|
-| Network | TBD | `server/`, `client/` | Server, PollManager, Socket, Client | - |
-| Parser | TBD | `parser/` | Parser, Message | PASS, NICK, USER, PING, PONG, QUIT |
-| Channel/Cmd | TBD | `channel/` | Channel | JOIN, PART, TOPIC, MODE, KICK, INVITE, PRIVMSG, NOTICE |
+📋 **세부 일정 및 작업 분담**: [PLAN.md](docs/PLAN.md)
 
-> `Client`는 Network가 생성/관리하지만 Parser(등록 상태), Channel(소속 채널)도 필드를 참조함.
-> `common/`은 3인 합의 후 최대한 변경 최소화.
+---
 
-## Directory Structure
+## 📚 References
 
-#### 미러링 구조
-`include/`와 `srcs/`는 동일한 하위 구조로 미러링됨 (`include/X` ↔ `srcs/X`).<br>
-- 아래는 추천 구조입니다.(클래스 만들 때 참고)
-- 디렉토리 세부 수정은 16일 회의에서 조정하시죠!!
-
-
-```
-include/
-├── server/                    ← Network 담당 전용 구역
-│   ├── Server.hpp
-│   ├── PollManager.hpp
-│   └── Socket.hpp
-├── client/
-│   └── Client.hpp              ← Network 소유, 전원 참조
-├── parser/                    ← Parser 담당 전용 구역
-│   ├── Parser.hpp
-│   ├── Message.hpp
-│   └── commands/
-│       ├── Pass.hpp
-│       ├── Nick.hpp
-│       ├── User.hpp
-│       ├── Ping.hpp
-│       ├── Pong.hpp
-│       └── Quit.hpp
-├── channel/                   ← Channel/Cmd 담당 전용 구역 (PRIVMSG/NOTICE 포함)
-│   ├── Channel.hpp
-│   └── commands/
-│       ├── Join.hpp
-│       ├── Part.hpp
-│       ├── Topic.hpp
-│       ├── Mode.hpp
-│       ├── Kick.hpp
-│       ├── Invite.hpp
-│       ├── Privmsg.hpp
-│       └── Notice.hpp
-└── common/                    ← 3인 합의 필요, 최대한 변경 최소화
-    ├── ICommand.hpp            (커맨드 인터페이스, 순수가상함수 — .cpp 없음)
-    ├── Replies.hpp             (RFC 규격 응답 코드 상수 — .cpp 없음)
-    └── Utils.hpp
-
-srcs/  (include/ 와 미러링, 단 .cpp가 불필요한 헤더 전용 파일은 제외 *)
-├── main.cpp
-├── server/
-│   ├── Server.cpp
-│   ├── PollManager.cpp
-│   └── Socket.cpp
-├── client/
-│   └── Client.cpp
-├── parser/
-│   ├── Parser.cpp
-│   ├── Message.cpp
-│   └── commands/
-│       └── (Pass.cpp, Nick.cpp, User.cpp, Ping.cpp, Pong.cpp, Quit.cpp)
-├── channel/
-│   ├── Channel.cpp
-│   └── commands/
-│       └── (Join.cpp, Part.cpp, Topic.cpp, Mode.cpp, Kick.cpp, Invite.cpp, Privmsg.cpp, Notice.cpp)
-└── common/
-    └── Utils.cpp
-
-* ICommand.hpp, Replies.hpp는 인터페이스/상수 전용 헤더라 대응 .cpp 없음
-```
-
-새 커맨드 추가 시: `include/<owner>/commands/`와 `srcs/<owner>/commands/`에 동일한 이름으로 `.hpp`/`.cpp` 쌍 생성.
-
-## Roadmap (3 weeks)
-
-- [ ] **Week 1** — 인터페이스 합의 (Server/Client/Channel/ICommand/Message 시그니처) + 개별 스켈레톤
-- [ ] **Week 2** — 병렬 구현 + 1차 통합 (`nc` 다중 클라이언트 테스트)
-- [ ] **Week 3** — 엣지 케이스, 메모리/fd 누수 점검, defense 준비
-
-세부 일정: [PLAN.md](./PLAN.md) <!-- 필요 시 별도 문서로 분리 -->
-
-## Testing
-
-- 로컬: `nc <host> <port>`
-- 표준 클라이언트: irssi, HexChat 등으로 defense 전 검증
-
-## Branch Convention
-
-담당 영역 기준으로 브랜치명을 정합니다.
-
-```
-feature/<담당>-<기능>
-fix/<담당>-<버그요약>
-```
-
-- `<담당>`: `network` | `parser` | `channel` | `common` | `docs`
-- `<기능>` / `<버그요약>`: kebab-case, 동사보다는 대상 중심으로 짧게
-
-예시:
-- `feature/network-poll-loop`
-- `feature/parser-message-parsing`
-- `feature/channel-join-part`
-- `fix/network-fd-leak-on-disconnect`
-
-규칙:
-- `main`은 항상 빌드/동작 가능한 상태로 유지 (직접 push 금지)
-- 모든 변경은 `feature/*` 또는 `fix/*` 브랜치에서 작업 후 **PR을 통해서만** `main`에 병합
-- PR은 **본인 외 최소 1인 리뷰/승인** 후 머지 (담당 영역이 겹치는 부분은 관련자 전원 리뷰)
-- 머지 방식은 `Squash and merge`로 통일 (커밋 히스토리 정리, 이력 추적 용이)
-- 머지된 브랜치는 삭제 (원격/로컬 모두 정리)
-- `common/` 변경이 포함된 PR은 3인 전원 리뷰 필수
-
-## Commit Convention
-
-<!-- 팀 합의 후 확정. 아래는 권장안 -->
-
-```
-<type>(<담당>): <description>
-```
-
-- `<담당>`: `network` | `parser` | `channel` | `common` | `docs` | `chore`
-- `<description>`: 무엇을 했는지 간결하게, 현재형 동사로 시작 (예: "추가", "수정", "제거")
-
-| type | 의미 | 예시 |
-|---|---|---|
-| `feat` | 기능 추가 | `feat(parser): PRIVMSG 파싱 구현` |
-| `fix` | 버그 수정 | `fix(network): poll 이벤트 누락 수정` |
-| `refactor` | 동작 변경 없는 코드 개선 | `refactor(channel): Channel::kick 중복 로직 정리` |
-| `test` | 테스트 추가/수정 | `test(parser): NICK 커맨드 파싱 테스트 추가` |
-| `docs` | 문서만 수정 | `docs: 브랜치 컨벤션 예시 추가` |
-| `chore` | 빌드/설정 등 잡무 | `chore: .gitignore에 빌드 산출물 추가` |
-
-- 커밋은 작게, 하나의 논리적 변경 단위로 (리뷰/롤백 용이)
-- 제목은 50자 내외로, 본문이 필요하면 한 줄 띄우고 "왜" 바꿨는지 서술
-
-## Issue / Task Tracking
-
-<!-- 팀 합의 후 확정 -->
-
-- GitHub Issues로 작업 단위 관리, PR에 `Closes #이슈번호` 연결
-- 라벨 예시: `network` / `parser` / `channel` / `common` / `bug` / `week1` `week2` `week3`
-
-
-## References
-
-- UNIX Network Programming Vol.1 (Stevens, 3rd Ed.)
-- [RFC 1459 - IRC Protocol](https://datatracker.ietf.org/doc/html/rfc1459)
-- [RFC 2812 - IRC Client Protocol](https://datatracker.ietf.org/doc/html/rfc2812)
+- [RFC 1459 - Internet Relay Chat Protocol](https://datatracker.ietf.org/doc/html/rfc1459)
+- [RFC 2812 - Internet Relay Chat: Client Protocol](https://datatracker.ietf.org/doc/html/rfc2812)
+- UNIX Network Programming, Volume 1 (W. Richard Stevens)
