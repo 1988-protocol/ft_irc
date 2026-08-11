@@ -77,26 +77,28 @@ bool    Client::extractLine(std::string &out)
 
 namespace
 {
-    // 클라이언트가 응답을 읽지 않거나 잘못된 명령을 계속 보내면 m_outBuffer가
-    // 무한정 커질 수 있다(EAGAIN으로 send()가 못 비우는 동안에도 recv()는 계속
-    // 진행되어 에러 응답이 계속 쌓임) — 상한을 두고 초과 시 연결을 끊는다.
     const std::string::size_type kMaxOutBufferSize = 64 * 1024;
+    // RFC 1459 2.3: CRLF 포함 512바이트 → 본문 510바이트.
+    const std::string::size_type kMaxLineBody = 510;
 }
 
 bool    Client::appendToOutBuffer(const std::string &data)
 {
-    if (m_outBuffer.size() > kMaxOutBufferSize)
+    std::string line = data;
+    if (line.size() > kMaxLineBody + 2)     // 510 + CRLF = 512
     {
-        markForDeletion();
-        return false;
+        line.erase(kMaxLineBody);
+        line += "\r\n";
     }
-    if (data.size() > kMaxOutBufferSize - m_outBuffer.size())
+
+    if (m_outBuffer.size() > kMaxOutBufferSize
+        || line.size() > kMaxOutBufferSize - m_outBuffer.size())
     {
         markForDeletion();
         return false;
     }
 
-    m_outBuffer += data;
+    m_outBuffer += line;
     return true;
 }
 

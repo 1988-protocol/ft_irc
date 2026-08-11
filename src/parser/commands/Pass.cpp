@@ -38,5 +38,13 @@ void Pass::execute(Server& server, Client& client, const Message& msg)
         return;
     }
     client.setHasCorrectPassword(true);
+
+    // PASS가 NICK/USER 뒤에 올 수도 있으므로 여기서도 등록 완료를 체크
+    if (!client.isRegistered() && !client.getNickname().empty() && !client.getUsername().empty())
+    {
+        client.setRegistered(true);
+        client.appendToOutBuffer(reply(Numeric::RPL_WELCOME, client.getNickname(), 
+            ":Welcome to the IRC network, " + client.getNickname()));
+    }
 }
 
