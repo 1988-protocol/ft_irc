@@ -57,9 +57,10 @@ void Message::setTrailing(const std::string& trailing)
 //
 // 커맨드/파라미터 사이의 공백은 코드상 다중 공백이 와도 하나의 구분자로 취급한다
 // (pre_plan.md Phase1 "중복 공백" 엣지 케이스) — Utils::split이 이를 처리한다.
+
 // trailing은 " :" 마커 이후 끝까지를 공백 보존한 채로 그대로 가져간다(예: "hello   world").
-// command는 여기서 대소문자를 정규화하지 않는다 — 대소문자 무시 비교는 Parser(디스패처)의
-// 책임이다(Message는 원문을 그대로 보존하는 것이 파싱 계층의 역할).
+// command는 여기서 대소문자를 정규화하지 않는다 그래서 어쩔 수 없이 split을 사용하지 않고
+// find_first_not_of(인덱스 탐색), substr을 사용하여 수동으로 파싱한다.
 Message Message::parse(const std::string& rawLine)
 {
     Message msg;
