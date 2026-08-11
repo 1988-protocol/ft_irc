@@ -15,7 +15,7 @@ void Privmsg::execute(Server& server, Client& client, const Message& msg)
     const std::vector<std::string>& params = msg.getParams();
     const std::string target = client.getNickname();
 
-
+    // 파라미터: <receiver>{,<receiver>} <text to be sent> (수신자 목록, 전송할 텍스트)
     // 1. 수신자 미지정 검사
     if (params.empty())
     {
@@ -37,7 +37,7 @@ void Privmsg::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    // 2. 메시지 내용 누락 검사
+    // 2. 수신자목록 파싱 & 메시지 내용 확인
     std::vector<std::string> targets = Utils::split(params[0], ',');
     for (size_t i = 0; i < targets.size(); ++i)
     {
