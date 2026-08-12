@@ -53,14 +53,18 @@ void Message::setTrailing(const std::string& trailing)
 //   params     = *14( SPACE middle ) [ SPACE ":" trailing ]
 //              =/ 14( SPACE middle ) [ SPACE [ ":" ] trailing ]
 // <middle>   ::= <Any non-empty sequence of octets not including SPACE or NUL or CR or LF, the first of which may not be ':'>
-// <trailing> ::= <Any sequence of octets not including NUL or CR or LF>
+//                (공백, NUL, CR, LF를 포함하지 않으며 첫 글자가 ':'가 될 수 없는 비어있지 않은 문자열)
+// <trailing> 뒤따르다 ::= <Any sequence of octets not including NUL or CR or LF>
+//                (NUL, CR, LF를 제외한 모든 문자열로, 공백을 자유롭게 포함할 수 있음)
 //
+// params (명령어/인자들): 공백을 '구분자'로 취급하므로 중복 공백이 무시/압축됨.
 // 커맨드/파라미터 사이의 공백은 코드상 다중 공백이 와도 하나의 구분자로 취급한다
-// (pre_plan.md Phase1 "중복 공백" 엣지 케이스) — Utils::split이 이를 처리한다.
+// (이거 때문에 처음에 Utils::split을 썼다가 안 맞아서 고생함...)
 
+// 나름 중요한 부분
 // trailing은 " :" 마커 이후 끝까지를 공백 보존한 채로 그대로 가져간다(예: "hello   world").
-// command는 여기서 대소문자를 정규화하지 않는다 그래서 어쩔 수 없이 split을 사용하지 않고
-// find_first_not_of(인덱스 탐색), substr을 사용하여 수동으로 파싱한다.
+// command는 여기서 대소문자를 정규화하지 않는다 — 대소문자 무시 비교는 Parser(디스패처)의
+// 책임이다(Message는 원문을 그대로 보존하는 것이 파싱 계층의 역할).
 Message Message::parse(const std::string& rawLine)
 {
     Message msg;
@@ -72,9 +76,8 @@ Message Message::parse(const std::string& rawLine)
         line.erase(line.size() - 1);
     }
 
-    // NUL 문자 검증 (Note 4) - 보안 취약점 차단 및 Fail-Fast
-    // 네트워크 단에서 처리하게 된 경우 여기 if문 제거
-    // 2. NUL('\0') 또는 내부 '\r' 존재 시 즉시 거부 (Fail-Fast)
+    // NUL('\0') 또는 내부 '\r' 존재 시 즉시 거부 (Fail-Fast)
+    // 악의적인 USER al\0ice 0 * :Alice, JOIN \r #chan 이런 거 거를려고!!
     if (line.find('\0') != std::string::npos || line.find('\r') != std::string::npos)
     {
         return msg;
@@ -158,20 +161,5 @@ Message Message::parse(const std::string& rawLine)
 // ":Alice NICK Bob"
 // PREFIX (COMMAND PARAM)
 //              MIDDLE
-
-// TODO(팀 논의 필요): Message 파라미터 캡슐화 메서드 구현 예시
-// size_t Message::getParamCount() const
-// {
-//     return m_params.size() + (m_hasTrailing ? 1 : 0);
-// }
-//
-// std::string Message::getParam(size_t index) const
-// {
-//     if (index < m_params.size())
-//         return m_params[index];
-//     if (m_hasTrailing && index == m_params.size())
-//         return m_trailing;
-//     return "";
-// }
 
 
