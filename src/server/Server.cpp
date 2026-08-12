@@ -5,6 +5,7 @@
 #include <cstring>          // memset
 #include <cerrno>           // errno, EINTR, EAGAIN
 #include <cstddef>          // std::size_t
+#include <vector>           // std::vector
 #include <unistd.h>
 #include <poll.h>
 #include <netinet/in.h>     // sockaddr_in
@@ -39,6 +40,14 @@ Server::~Server()
         delete it->second;
     }
     m_clients.clear();
+
+    // 채널 소멸자 호출
+    for (std::map<std::string, Channel*>::iterator it = m_channels.begin();
+        it != m_channels.end(); ++it)
+    {
+        delete it->second;
+    }
+    m_channels.clear();
 }
 
 // ────────────────────────────────────────────────────────
@@ -120,10 +129,34 @@ void Server::disconnectClient(int fd)
         return;
     
     std::cout << "[server] 연결 종료 (fd " << fd << ")" << std::endl;
+
+    // Client 객체를 해제하기 전에, 이 포인터의 사본을 들고 있는 컨테이너를 모두 비운다.
+    // 사본이 남는 곳은 채널마다 존재하는 m_members / m_invitedUsers 두 개뿐이고,
+    // removeMember()가 내부에서 removeInvite()까지 연쇄 호출하므로 한 번만 부르면 된다.
+    // (멤버가 아닌 채널에 호출해도 안전 — 초대만 받고 입장하지 않은 잔재까지 같이 정리된다)
+    std::vector<std::string>    emptyChannels;
+
+    for (std::map<std::string, Channel*>::iterator ch = m_channels.begin();
+        ch != m_channels.end(); ++ch)
+    {
+        if (!ch->second)
+            continue;
+        ch->second->removeMember(it->second);
+        // 멤버가 0명이 된 채널은 삭제한다.
+        // 지금까지 이 규칙은 PART/KICK에만 있어서, QUIT·소켓 끊김·POLLERR 등으로
+        // 마지막 멤버가 사라지면 빈 채널이 그대로 남았다.
+        // disconnectClient는 그 모든 끊김 경로가 거쳐가는 지점이므로 여기서 함께 처리한다.
+        if (ch->second->getMembers().empty())
+            emptyChannels.push_back(ch->first);
+    }
+
+    for (std::size_t i = 0; i < emptyChannels.size(); ++i)
+        removeChannel(emptyChannels[i]);
+
     m_poll.remove(fd);
     close(fd);
     delete it->second;
-    m_clients.erase(it); 
+    m_clients.erase(it);
 }
 
 //함수 만들어야함 
@@ -149,19 +182,27 @@ void Server::acceptNewClient()
         }
             // accept 성공
             // 새로운 fd를 논블로킹으로 설정
-            Socket::setNonBlocking(clientFd); 
+        if(!Socket::setNonBlocking(clientFd))
+        {
+            close(clientFd);
+            continue;
+        } 
 
-            // 새로운 클라이언트를 만들어야함.
+        // 새로운 클라이언트를 만들어야함.
+        Client *new_client = NULL;
+        try {
             std::string ip = inet_ntoa(client.sin_addr);
-            Client *new_client =  new Client(clientFd, ip);
-
-            // map에대한 공부
+            new_client = new Client(clientFd, ip);
             m_clients[clientFd] = new_client;
-            // 새로운 fd를 poll에 추가
             m_poll.add(clientFd);
-            
-		    std::cout << "[server] 새 접속: " << ip
-				<< " (fd " << clientFd << ")" << std::endl;
+            std::cout << "[server] 새 접속: " << ip << " (fd " << clientFd << ")" << std::endl;
+        } 
+        catch (const std::exception &) {
+            m_clients.erase(clientFd);
+            delete new_client;
+            close(clientFd);
+            continue;
+        }
     }
 }
 
@@ -211,10 +252,6 @@ void    Server::handleLine(Client *client, const std::string &line)
     std::cout << "[recv fd " << client->getFd() << "]" << line << std::endl;
 
     m_parser.process(*this, *client, line);
-
-    // 디버깅용 출력
-    if (!client->getNickname().empty())
-        std::cout << "[recv fd " << client->getFd() << " ] nick: " << client->getNickname() << std::endl;
 }
 
 void Server::sendToClient(int fd)

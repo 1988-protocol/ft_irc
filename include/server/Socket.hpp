@@ -16,7 +16,7 @@ class Socket
         ~Socket();
 
         int createListener(int port);
-        static void setNonBlocking(int fd);
+        static bool setNonBlocking(int fd);
 
         int getFd() const;
 };
