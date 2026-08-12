@@ -3,7 +3,7 @@
 #include <iostream>
 #include <csignal>          // sigaction, signal, sigemptyset
 #include <cstring>          // memset
-#include <cerrno>           // errno, EINTR, EAGAIN
+#include <cerrno>           // errno, EINTR
 #include <cstddef>          // std::size_t
 #include <vector>           // std::vector
 #include <unistd.h>
@@ -162,47 +162,42 @@ void Server::disconnectClient(int fd)
 //함수 만들어야함 
 void Server::acceptNewClient()
 {
-    while (true)
+    struct sockaddr_in  client;
+    socklen_t           client_len = sizeof(client);
+
+    // poll()이 리스닝 소켓에 POLLIN을 준 뒤 accept를 정확히 한 번만 호출한다.
+    // poll은 level-triggered라서 대기 중인 접속이 더 남아 있으면
+    // 다음 루프에서 POLLIN이 다시 올라온다 -> 반복 accept로 fd를 독점할 이유가 없다.
+    //client와 연결을 유지하는 새로운 socket을 생성합니다 (서버의 리스닝 소켓과는 별개)
+    int clientFd = accept(m_listener.getFd(),
+                                reinterpret_cast<struct sockaddr*>(&client), &client_len);
+    // 실패하면 다음 poll을 기다린다.
+    // (handshake 후 accept 전에 클라이언트가 RST를 보낸 경우 등)
+    if (clientFd < 0)
+        return;
+
+    // accept 성공
+    // 새로운 fd를 논블로킹으로 설정
+    if(!Socket::setNonBlocking(clientFd))
     {
-        struct sockaddr_in  client;
-        socklen_t           client_len = sizeof(client);
+        close(clientFd);
+        return;
+    }
 
-        //client와 연결을 유지하는 새로운 socket을 생성합니다 (서버의 리스닝 소켓과는 별개)
-        int clientFd = accept(m_listener.getFd(), 
-                                    reinterpret_cast<struct sockaddr*>(&client), &client_len);
-        if (clientFd < 0)
-        {
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                // 더 이상 대기 중인 접속이 없음 -> 정상 종료.
-                break;
-            }
-            else
-                break; // 예외처리
-        }
-            // accept 성공
-            // 새로운 fd를 논블로킹으로 설정
-        if(!Socket::setNonBlocking(clientFd))
-        {
-            close(clientFd);
-            continue;
-        } 
-
-        // 새로운 클라이언트를 만들어야함.
-        Client *new_client = NULL;
-        try {
-            std::string ip = inet_ntoa(client.sin_addr);
-            new_client = new Client(clientFd, ip);
-            m_clients[clientFd] = new_client;
-            m_poll.add(clientFd);
-            std::cout << "[server] 새 접속: " << ip << " (fd " << clientFd << ")" << std::endl;
-        } 
-        catch (const std::exception &) {
-            m_clients.erase(clientFd);
-            delete new_client;
-            close(clientFd);
-            continue;
-        }
+    // 새로운 클라이언트를 만들어야함.
+    Client *new_client = NULL;
+    try {
+        std::string ip = inet_ntoa(client.sin_addr);
+        new_client = new Client(clientFd, ip);
+        m_clients[clientFd] = new_client;
+        m_poll.add(clientFd);
+        std::cout << "[server] 새 접속: " << ip << " (fd " << clientFd << ")" << std::endl;
+    }
+    catch (const std::exception &) {
+        m_clients.erase(clientFd);
+        delete new_client;
+        close(clientFd);
+        return;
     }
 }
 
@@ -221,10 +216,9 @@ void Server::receiveFromClient(int fd)
         return;
     }
 
+    // poll()이 POLLIN을 준 직후이므로 여기서의 실패는 진짜 오류로 본다.
     if (recv_len < 0)
     {
-        if(errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
         disconnectClient(fd);
         return ;
     }
@@ -266,11 +260,10 @@ void Server::sendToClient(int fd)
     {
         return;
     }
+    // poll()이 POLLOUT을 준 직후이므로 여기서의 실패는 진짜 오류로 본다.
     ssize_t n = send(fd, out.c_str(), out.size(), 0);
     if(n < 0)
     {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
         disconnectClient(fd);
         return;
     }
