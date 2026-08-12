@@ -9,7 +9,7 @@
 // 다른 파일에서는 이 내용물을 볼 수 없음
 namespace
 {
-    // 서버 식별 이름. Server 클래스가 아직 실구현되지 않았고(Network Phase1 몫),
+    // 서버 식별 이름.
     // Parser의 reply() 헬퍼는 그와 무관하게 지금 바로 동작해야 하므로 상수로 둔다.
     // Server 실구현 이후 실제 호스트명이 필요해지면 이 지점만 교체하면 된다.
     const char* SERVER_NAME = "ircserv";
