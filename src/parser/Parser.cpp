@@ -67,7 +67,8 @@ void Parser::process(Server& server, Client& client, const std::string& rawLine)
     std::string command = Utils::toUpper(msg.getCommand());
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
-    if (!client.isRegistered() && !isAllowedBeforeRegistration(command)) // 로그인을 안 했거나 로그인 전에 쓸 수 있는 명령어가 아니라면
+    // 로그인을 안 했거나 로그인 전에 쓸 수 있는 명령어가 아니라면
+    if (!client.isRegistered() && !isAllowedBeforeRegistration(command)) 
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NOTREGISTERED, target, ":You have not registered"));
         return;

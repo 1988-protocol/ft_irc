@@ -19,14 +19,6 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
 {
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
-    // TODO(팀 논의 필요): Message 캡슐화(getParamCount / getParam) 합의 시 아래 코드로 대체 가능:
-    // if (msg.getParamCount() < 1)
-    // {
-    //     client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
-    //     return;
-    // }
-    // const std::string& nickname = msg.getParam(0);
-
     if (msg.getParams().empty())
     {
         client.appendToOutBuffer(reply(Numeric::ERR_NONICKNAMEGIVEN, target, ":No nickname given"));
@@ -50,7 +42,7 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         client.appendToOutBuffer(reply(Numeric::ERR_NICKNAMEINUSE, target, nickname + " :Nickname is already in use"));
         return;
     }
-    // 닉네임 설정 (m_clients가 single source of truth이므로 client.setNickname만으로 서버 전체에 즉시 반영)
+    // 닉네임 설정 (User와 다르게 등록을 마친 후 /Nick 으로 닉네임 변경이 가능하다.)
     client.setNickname(nickname);
 
     // 등록 부분
