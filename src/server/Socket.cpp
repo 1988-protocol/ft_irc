@@ -38,7 +38,12 @@ int Socket::createListener(int port)
         throw std::runtime_error("setsocket() 실패");
 
     // 3) 논블로킹으로 전환 
-    setNonBlocking(m_fd);
+    if (!setNonBlocking(m_fd))
+	{
+		close(m_fd);
+		m_fd = -1;
+		throw std::runtime_error("fcntl(O_NONBLOCK) 실패");
+	}
 
     // 4) bind :  
     // sockaddr_in 구조체 만듦(주소 담을)
@@ -67,10 +72,9 @@ int Socket::createListener(int port)
 	return m_fd;
 }
 
-void	Socket::setNonBlocking(int fd)
+bool	Socket::setNonBlocking(int fd)
 {
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
-		throw std::runtime_error("fcntl(O_NONBLOCK) 실패");
+	return fcntl(fd, F_SETFL, O_NONBLOCK) >= 0;
 }
 
 int	Socket::getFd() const
