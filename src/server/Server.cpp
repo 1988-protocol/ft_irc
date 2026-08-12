@@ -5,6 +5,7 @@
 #include <cstring>          // memset
 #include <cerrno>           // errno, EINTR, EAGAIN
 #include <cstddef>          // std::size_t
+#include <vector>           // std::vector
 #include <unistd.h>
 #include <poll.h>
 #include <netinet/in.h>     // sockaddr_in
@@ -39,6 +40,14 @@ Server::~Server()
         delete it->second;
     }
     m_clients.clear();
+
+    // 채널 소멸자 호출
+    for (std::map<std::string, Channel*>::iterator it = m_channels.begin();
+        it != m_channels.end(); ++it)
+    {
+        delete it->second;
+    }
+    m_channels.clear();
 }
 
 // ────────────────────────────────────────────────────────
@@ -125,13 +134,24 @@ void Server::disconnectClient(int fd)
     // 사본이 남는 곳은 채널마다 존재하는 m_members / m_invitedUsers 두 개뿐이고,
     // removeMember()가 내부에서 removeInvite()까지 연쇄 호출하므로 한 번만 부르면 된다.
     // (멤버가 아닌 채널에 호출해도 안전 — 초대만 받고 입장하지 않은 잔재까지 같이 정리된다)
-    // 빈 채널 삭제와 QUIT 브로드캐스트는 이 단계의 범위가 아니다.
+    std::vector<std::string>    emptyChannels;
+
     for (std::map<std::string, Channel*>::iterator ch = m_channels.begin();
         ch != m_channels.end(); ++ch)
     {
-        if (ch->second)
-            ch->second->removeMember(it->second);
+        if (!ch->second)
+            continue;
+        ch->second->removeMember(it->second);
+        // 멤버가 0명이 된 채널은 삭제한다.
+        // 지금까지 이 규칙은 PART/KICK에만 있어서, QUIT·소켓 끊김·POLLERR 등으로
+        // 마지막 멤버가 사라지면 빈 채널이 그대로 남았다.
+        // disconnectClient는 그 모든 끊김 경로가 거쳐가는 지점이므로 여기서 함께 처리한다.
+        if (ch->second->getMembers().empty())
+            emptyChannels.push_back(ch->first);
     }
+
+    for (std::size_t i = 0; i < emptyChannels.size(); ++i)
+        removeChannel(emptyChannels[i]);
 
     m_poll.remove(fd);
     close(fd);
