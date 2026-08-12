@@ -182,19 +182,22 @@ void Server::acceptNewClient()
         }
             // accept 성공
             // 새로운 fd를 논블로킹으로 설정
-            Socket::setNonBlocking(clientFd); 
+        if(!Socket::setNonBlocking(clientFd))
+        {
+            close(clientFd);
+            continue;
+        } 
 
-            // 새로운 클라이언트를 만들어야함.
-            std::string ip = inet_ntoa(client.sin_addr);
-            Client *new_client =  new Client(clientFd, ip);
-
-            // map에대한 공부
-            m_clients[clientFd] = new_client;
-            // 새로운 fd를 poll에 추가
-            m_poll.add(clientFd);
-            
-		    std::cout << "[server] 새 접속: " << ip
-				<< " (fd " << clientFd << ")" << std::endl;
+        // 새로운 클라이언트를 만들어야함.
+        std::string ip = inet_ntoa(client.sin_addr);
+        Client *new_client =  new Client(clientFd, ip);
+        // map에대한 공부
+        m_clients[clientFd] = new_client;
+        // 새로운 fd를 poll에 추가
+        m_poll.add(clientFd);
+        
+		std::cout << "[server] 새 접속: " << ip
+			<< " (fd " << clientFd << ")" << std::endl;
     }
 }
 
