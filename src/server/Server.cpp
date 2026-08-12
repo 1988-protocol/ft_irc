@@ -120,10 +120,23 @@ void Server::disconnectClient(int fd)
         return;
     
     std::cout << "[server] 연결 종료 (fd " << fd << ")" << std::endl;
+
+    // Client 객체를 해제하기 전에, 이 포인터의 사본을 들고 있는 컨테이너를 모두 비운다.
+    // 사본이 남는 곳은 채널마다 존재하는 m_members / m_invitedUsers 두 개뿐이고,
+    // removeMember()가 내부에서 removeInvite()까지 연쇄 호출하므로 한 번만 부르면 된다.
+    // (멤버가 아닌 채널에 호출해도 안전 — 초대만 받고 입장하지 않은 잔재까지 같이 정리된다)
+    // 빈 채널 삭제와 QUIT 브로드캐스트는 이 단계의 범위가 아니다.
+    for (std::map<std::string, Channel*>::iterator ch = m_channels.begin();
+        ch != m_channels.end(); ++ch)
+    {
+        if (ch->second)
+            ch->second->removeMember(it->second);
+    }
+
     m_poll.remove(fd);
     close(fd);
     delete it->second;
-    m_clients.erase(it); 
+    m_clients.erase(it);
 }
 
 //함수 만들어야함 
