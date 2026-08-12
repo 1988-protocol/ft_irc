@@ -32,12 +32,6 @@ public:
     // 판별할 수 없다 — 이 플래그로 명시적으로 구분한다.
     bool hasTrailing() const;
 
-    // TODO(팀 논의 필요): 파라미터 개수 검사 및 N번째 파라미터 조회 캡슐화 제안
-    // - getParamCount(): middle + trailing 전체 파라미터 합산 개수 반환 (ERR_NEEDMOREPARAMS 등에 활용)
-    // - getParam(index): middle/trailing 구분 없이 N번째 인자를 안전하게 조회(이건 선택)
-    // size_t getParamCount() const;
-    // std::string getParam(size_t index) const;
-
     void setPrefix(const std::string& prefix);
     void setCommand(const std::string& command);
     void setTrailing(const std::string& trailing);

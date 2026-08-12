@@ -24,11 +24,11 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    // 명령어: MODE / 파라미터: <channel> {[+|-]|o|p|s|i|t|n|b|v} [<limit>] [<user(닉네임)>] [<ban mask>]
+    // 명령어: MODE / 파라미터: <channel> {[+|-]|o|l|i|t|k} [<limit>] [<user(닉네임)>]
     std::string channelName = params[0];
 
     // 파라미터 없거나 채널명이 아닐 경우 리턴
-    if (channelName.empty() || (channelName[0] != '#' && channelName[0] != '&'))
+    if (channelName.empty())
         return;
 
     // 채널 존재 여부 확인
