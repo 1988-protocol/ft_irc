@@ -73,13 +73,18 @@ void Server::run(){
             short re = m_poll.getEvent(i);
 
             int listenFd = m_listener.getFd();
-            if (re & (POLLERR | POLLHUP | POLLNVAL) && fd != listenFd)
+            // POLLERR/POLLNVAL은 소켓 자체가 망가진 상태라 더 읽어봐야 의미가 없다 -> 즉시 정리.
+            // POLLHUP은 여기서 처리하면 안 된다. BSD/macOS는 상대가 FIN만 보낸 half-close에서도
+            // 수신 버퍼에 안 읽은 데이터가 남아 있는 채로 POLLIN|POLLHUP을 함께 올리기 때문에,
+            // 먼저 끊으면 그 데이터와 이미 큐에 쌓인 응답까지 통째로 버려진다.
+            // (`printf '...' | nc host port` 가 정확히 이 형태다)
+            if (re & (POLLERR | POLLNVAL) && fd != listenFd)
             {
                 disconnectClient(fd);
                 --i;
                 continue;
             }
-            
+
             // 1) 읽을게 있음
             if(re & POLLIN)
             {
@@ -116,10 +121,43 @@ void Server::run(){
                     }
                 }
             }
+            // 3) 상대가 연결을 닫음 (POLLIN/POLLOUT을 모두 처리한 뒤에 본다)
+            // POLLIN이 함께 올라온 경우는 위에서 이미 recv로 처리했다.
+            // 남은 데이터를 다 읽고 나면 recv가 0을 돌려주면서 그쪽에서 정리하므로,
+            // 여기서 미리 끊으면 4096바이트를 넘는 입력이 잘려 나간다.
+            // POLLHUP만 단독으로 올라오는 경우에만 정리한다. 이 분기가 없으면 아무도
+            // POLLHUP을 소비하지 않아 poll()이 계속 즉시 반환하는 busy loop가 된다.
+            if ((re & POLLHUP) && !(re & POLLIN) && fd != listenFd
+                && m_clients.find(fd) != m_clients.end())
+            {
+                flushAndDisconnect(fd);
+                --i;
+                continue;
+            }
         }
         updateWriteEvents();
     }
     std::cout <<"\n[server] 종료합니다." << std::endl;
+}
+
+// 끊기 직전, out버퍼에 남은 응답을 보낼 수 있는 만큼 보내고 정리한다.
+// 소켓은 논블로킹이라 커널 송신 버퍼가 차면 send가 -1을 돌려주고 루프가 끝난다 -> 블로킹되지 않는다.
+// (errno는 보지 않는다. 더 못 보내는 상황이면 어차피 곧 닫을 fd라 실패 원인을 구분할 이유가 없다)
+void Server::flushAndDisconnect(int fd)
+{
+    std::map<int, Client*>::iterator it = m_clients.find(fd);
+    if (it == m_clients.end())
+        return;
+
+    std::string &out = it->second->getOutBuffer();
+    while (!out.empty())
+    {
+        ssize_t n = send(fd, out.c_str(), out.size(), 0);
+        if (n <= 0)
+            break;
+        out.erase(0, n);
+    }
+    disconnectClient(fd);
 }
 
 void Server::disconnectClient(int fd)
@@ -211,8 +249,10 @@ void Server::receiveFromClient(int fd)
 
     if (recv_len == 0)
     {
-        // 상대가 정상적으로 연결을 닫음
-        disconnectClient(fd);
+        // 상대가 정상적으로 연결을 닫음.
+        // 쓰기 쪽만 닫은 half-close라면 읽기 쪽은 살아 있어서 아직 응답을 받을 수 있다.
+        // 마지막 명령의 응답이 out버퍼에 남아 있을 수 있으므로 한 번 밀어내고 정리한다.
+        flushAndDisconnect(fd);
         return;
     }
 
