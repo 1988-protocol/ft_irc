@@ -252,10 +252,6 @@ void    Server::handleLine(Client *client, const std::string &line)
     std::cout << "[recv fd " << client->getFd() << "]" << line << std::endl;
 
     m_parser.process(*this, *client, line);
-
-    // 디버깅용 출력
-    if (!client->getNickname().empty())
-        std::cout << "[recv fd " << client->getFd() << " ] nick: " << client->getNickname() << std::endl;
 }
 
 void Server::sendToClient(int fd)

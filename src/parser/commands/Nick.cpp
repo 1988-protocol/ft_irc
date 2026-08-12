@@ -44,13 +44,13 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    //추가
+    //추가---------------------------------
     std::string oldNick = client.getNickname();
+    const bool wasRegistered = client.isRegistered();
+    //추가---------------------------------
 
     // 닉네임 설정 (m_clients가 single source of truth이므로 client.setNickname만으로 서버 전체에 즉시 반영)
     client.setNickname(nickname);
-
-    std::cout << "nickname 세팅" << nickname << std::endl;
 
     // 등록 부분
     // 등록되지 않았고, 클라이언트의 올바를 비밀번호이며, 유저 정보가 있다면.
@@ -61,10 +61,12 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         // 환영해요.
     }
 
+    //추가---------------------------------
     // 이미 등록된 클라이언트가 닉네임을 변경한 경우, NICK 변경 패킷 알림 전송
-    if (client.isRegistered() && !oldNick.empty())
+    if (wasRegistered && !oldNick.empty())
     {
         std::string nickMsg = ":" + oldNick + "!" + client.getUsername() + "@" + client.getIp() + " NICK :" + nickname + "\r\n";
         client.appendToOutBuffer(nickMsg);
     }
+    //추가---------------------------------
 }
