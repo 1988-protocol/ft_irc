@@ -64,7 +64,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    // 모드 변경 시도 시 방장(Operator) 권한 확인
+    // 모드 변경 시도 시 방장 권한 확인
     if (!channel->isOperator(&client)) {
         client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, target, channelName + " :You're not channel operator"));
         return;
@@ -77,8 +77,8 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     bool isAdding = (modeStr[0] == '+');
     size_t paramIdx = 2; // 추가 인자가 위치할 인덱스
 
-    std::string appliedModes = ""; // 실제 적용된 모드 기호 모음 (예: "+itk")
-    std::string appliedArg = ""; // 브로드캐스트용 추가 인자 저장 변수 (예: "secret user2")
+    std::string appliedModes = ""; // 실제 적용된 모드 기호 모음
+    std::string appliedArg = ""; // 추가 인자 저장 변수
 
     for (size_t i = 0; i < modeStr.size(); ++i)
     {

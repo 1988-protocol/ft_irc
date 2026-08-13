@@ -20,7 +20,7 @@ void Privmsg::execute(Server& server, Client& client, const Message& msg)
     // 수신자 미지정 검사
     if (params.empty())
     {
-        client.appendToOutBuffer(reply(Numeric::ERR_NORECIPIENT, target, ":No recipient given"));
+        client.appendToOutBuffer(reply(Numeric::ERR_NORECIPIENT, target, ":No recipient given(PRIVMSG)"));
         return;
     }
 

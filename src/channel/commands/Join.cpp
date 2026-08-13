@@ -156,7 +156,7 @@ void Join::execute(Server& server, Client& client, const Message& msg)
             std::string testReply = reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + tempList);
 
             // 완성된 전체 메시지가 512바이트를 초과하면, 기존까지 모은 memberList를 먼저 전송
-            if (!memberList.empty() && (testReply.size() > 510))
+            if (!memberList.empty() && (testReply.size() > 512))
             {
                 client.appendToOutBuffer(reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + memberList));
                 memberList = memberNick; // 새 닉네임부터 다시 모으기 시작

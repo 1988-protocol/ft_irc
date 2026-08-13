@@ -6,7 +6,7 @@
 #include "common/Utils.hpp"
 #include "common/Replies.hpp"
 
-//RFC 1459 4.2.3.1
+//RFC 1459 4.2.4
 
 Topic::Topic() : ICommand() {}
 
