@@ -18,6 +18,11 @@ Channel* Server::getChannel(const std::string& channelName)
     return NULL;
 }
 
+const std::map<std::string, Channel*>& Server::getChannels() const
+{
+    return m_channels;
+}
+
 void Server::addChannel(const std::string& channelName, Channel* channel)
 {
     m_channels[channelName] = channel;

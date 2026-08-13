@@ -61,12 +61,11 @@ class Server{
 
         //Server cmds 관련────────────────────────────────────────────────────────
         Channel* getChannel(const std::string& channelName);
+        const std::map<std::string, Channel*>& getChannels() const;
         void addChannel(const std::string& channelName, Channel* channel);
         void removeChannel(const std::string& channelName);
         Client* getClientByNick(const std::string& nickname);
         size_t getUserJoinedChannelCount(Client* client) const;
-
-
 };
 
 #endif
