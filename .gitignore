@@ -34,6 +34,10 @@ Thumbs.db
 *.bak
 *.tmp
 
+# Python (통합 테스트 스크립트)
+__pycache__/
+*.py[cod]
+
 # Language server & compilation database files
 .clangd
 compile_commands.json
