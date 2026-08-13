@@ -22,8 +22,6 @@ namespace Numeric
     const int RPL_CHANNELMODEIS     = 324;  // 채널 모드를 표시
     const int RPL_NOTOPIC           = 331;  // 채널에 토픽이 없음
     const int RPL_TOPIC             = 332;  // 채널 토픽을 표시
-    const int RPL_JOIN              = 333;  // 채널에 JOIN했음을 알림
-    const int RPL_PART              = 334;  // 채널에서 PART했음을 알림
     const int RPL_INVITING          = 341;  // 초대 성공 알림
     const int RPL_NAMREPLY          = 353;  // 채널 유저 목록을 표시
     const int RPL_ENDOFNAMES        = 366;  // 채널 유저 목록의 끝을 알림
@@ -33,11 +31,13 @@ namespace Numeric
     const int ERR_NOSUCHCHANNEL         = 403;  // 해당 채널이 존재하지 않음
     const int ERR_CANNOTSENDTOCHAN      = 404;  // 채널에 메시지를 보낼 수 없음
     const int ERR_TOOMANYCHANNELS       = 405;  // 참여할 수 있는 최대 채널 수를 초과함
+    const int ERR_TOOMANYTARGETS        = 407;  // 수신자가 너무 많음
     const int ERR_NORECIPIENT           = 411;  // 수신자가 지정되지 않음
     const int ERR_NOTEXTTOSEND          = 412;  // 전송할 텍스트가 없음
     const int ERR_USERNOTINCHANNEL      = 441;  // 해당 유저가 채널에 없음
     const int ERR_NOTONCHANNEL          = 442;  // 해당 채널의 멤버가 아님
     const int ERR_USERONCHANNEL         = 443;  // 이미 채널에 있는 유저
+    const int ERR_KEYSET                = 467;  // 이미 비밀번호가 설정되어 있는 경우 차단
     const int ERR_CHANNELISFULL         = 471;  // 채널이 가득 참
     const int ERR_UNKNOWNMODE           = 472;  // 알 수 없는 모드
     const int ERR_INVITEONLYCHAN        = 473;  // 초대 전용 채널
