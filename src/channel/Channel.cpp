@@ -21,7 +21,7 @@ std::string Channel::getKey() const
     return m_key;
 }
 
-// 현재 설정된 모드 상태를 문자열로 반환 (예: "+itk")
+// 현재 설정된 모드 상태를 문자열로 반환
 std::string Channel::getModeString() const
 {
     std::string modes = "+";
