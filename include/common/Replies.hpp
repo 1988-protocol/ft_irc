@@ -32,11 +32,13 @@ namespace Numeric
     const int ERR_NOSUCHCHANNEL         = 403;  // 해당 채널이 존재하지 않음
     const int ERR_CANNOTSENDTOCHAN      = 404;  // 채널에 메시지를 보낼 수 없음
     const int ERR_TOOMANYCHANNELS       = 405;  // 참여할 수 있는 최대 채널 수를 초과함
+    const int ERR_TOOMANYTARGETS        = 407;  // 수신자가 너무 많음
     const int ERR_NORECIPIENT           = 411;  // 수신자가 지정되지 않음
     const int ERR_NOTEXTTOSEND          = 412;  // 전송할 텍스트가 없음
     const int ERR_USERNOTINCHANNEL      = 441;  // 해당 유저가 채널에 없음
     const int ERR_NOTONCHANNEL          = 442;  // 해당 채널의 멤버가 아님
     const int ERR_USERONCHANNEL         = 443;  // 이미 채널에 있는 유저
+    const int ERR_KEYSET                = 467;  // 이미 비밀번호가 설정되어 있는 경우 차단
     const int ERR_CHANNELISFULL         = 471;  // 채널이 가득 참
     const int ERR_UNKNOWNMODE           = 472;  // 알 수 없는 모드
     const int ERR_INVITEONLYCHAN        = 473;  // 초대 전용 채널
