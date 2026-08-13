@@ -341,6 +341,7 @@ void Server::setSignal()
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, 0);
     sigaction(SIGTERM, &sa, 0);
+    sigaction(SIGQUIT, &sa, 0);
     signal(SIGPIPE, SIG_IGN);
 }
 
