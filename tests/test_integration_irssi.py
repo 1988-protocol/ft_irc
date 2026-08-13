@@ -5,7 +5,7 @@ import subprocess
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_utils import read_until_eof
+from test_utils import read_until_eof, drain_process_output
 
 def main():
     print("=== Starting Irssi Client Simulation Integration Test ===")
@@ -14,6 +14,7 @@ def main():
     port = 10002
     password = "testpassword"
     server_process = subprocess.Popen(["./ircserv", str(port), password], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    drain_process_output(server_process)  # stdout 파이프가 안 읽혀서 서버가 멈추는 것을 방지
     time.sleep(0.5) # Wait for server to bind and start listening
 
     try:
@@ -82,9 +83,9 @@ def main():
         time.sleep(0.1)
         resp_pm = read_until_eof(s_alice)
         print("[Alice received PRIVMSG]:")
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "PRIVMSG ir_alice :Hello from Irssi Bob!" in resp_pm, "Irssi PRIVMSG failed"
-        # print("-> Irssi PRIVMSG SUCCESS!")
+        print(resp_pm.strip())
+        assert "PRIVMSG ir_alice :Hello from Irssi Bob!" in resp_pm, "Irssi PRIVMSG failed"
+        print("-> Irssi PRIVMSG SUCCESS!")
 
         # Cleanup sockets
         s_alice.close()
