@@ -218,7 +218,8 @@ def main():
         print(resp_bob_nick.strip())
 
         assert "NICK :wonder" in resp_alice_nick, "Alice did not receive NICK confirmation"
-        assert "NICK :wonder" in resp_bob_nick, "Bob did not receive NICK broadcast"
+        assert ":alice!" in resp_bob_nick and " NICK :wonder\r\n" in resp_bob_nick, \
+            "Bob did not receive Alice's valid NICK broadcast"
         # Duplicate prevention check: Bob must receive the NICK broadcast exactly ONCE despite 2 shared channels
         assert resp_bob_nick.count("NICK :wonder") == 1, \
             f"Expected exactly 1 NICK broadcast to Bob, but got {resp_bob_nick.count('NICK :wonder')}"
@@ -250,7 +251,8 @@ def main():
         print(resp_bob_quit.strip())
 
         assert "ERROR :Closing Link: Goodbye all!" in resp_alice_quit, "Alice did not receive ERROR closing link"
-        assert "QUIT :Goodbye all!" in resp_bob_quit, "Bob did not receive QUIT broadcast"
+        assert ":alice!" in resp_bob_quit and " QUIT :Goodbye all!\r\n" in resp_bob_quit, \
+            "Bob did not receive Alice's valid QUIT broadcast"
         # Duplicate prevention check: Bob must receive the QUIT broadcast exactly ONCE despite 2 shared channels
         assert resp_bob_quit.count("QUIT :Goodbye all!") == 1, \
             f"Expected exactly 1 QUIT broadcast to Bob, but got {resp_bob_quit.count('QUIT :Goodbye all!')}"

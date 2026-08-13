@@ -8,7 +8,7 @@
 // buildMessage 인자를 위한 전방선언
 class Client;
 
-// pre_plan.md Phase0에서 합의한 numeric reply 헬퍼 시그니처를 그대로 유지한다.
+// numeric reply
 // ":<server> <code> <target> <msg>\r\n" 형태의 완성된 응답 줄을 만든다.
 // code가 3자리 미만이면 앞을 '0'으로 채운다(RFC1459: numeric은 항상 3자리 문자열).
 // msg에 커맨드명이 필요한 코드(예: 461 "NICK :Not enough parameters")는

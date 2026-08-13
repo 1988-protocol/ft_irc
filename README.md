@@ -112,7 +112,7 @@ flowchart TD
 
 `include/`와 `src/`는 모듈별로 완벽하게 미러링된 구조를 갖습니다.
 
-```
+```text
 .
 ├── Makefile
 ├── README.md
@@ -186,7 +186,6 @@ flowchart TD
 | `KICK` | 채널에서 특정 유저 강제 퇴장 (오퍼레이터 전용) | Channel |
 | `INVITE` | 초대전용 채널에 유저 초대 (오퍼레이터 전용) | Channel |
 | `PRIVMSG` | 유저 1:1 메시지 전송 또는 채널 브로드캐스팅 | Channel / Parser |
-| `NOTICE` | 에러 응답이 없는 알림 메시지 전송 | Channel / Parser |
 
 ### 3. Channel Modes
 - `+i` / `-i`: 초대 전용 채널 (Invite-only)

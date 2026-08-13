@@ -53,7 +53,8 @@ void Parser::registerCommand(const std::string& name, ICommand* handler)
 bool Parser::isAllowedBeforeRegistration(const std::string& command) const 
 {
     return command == "PASS" || command == "NICK" || command == "USER"
-        || command == "QUIT" || command == "PING" || command == "PONG";
+        || command == "QUIT" || command == "PING" || command == "PONG"
+        || command == "CAP";
 } 
 
 void Parser::process(Server& server, Client& client, const std::string& rawLine)
