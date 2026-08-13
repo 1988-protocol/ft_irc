@@ -144,7 +144,7 @@ namespace
     {
         Parser parser;
         // [Change] real Server 생성자 (int port, const std::string& password) 호출
-        Server server(0, "testpass");
+        Server server(6667, "testpass");
 
         // 미등록 상태에서 등록 계열 외 커맨드는 451
         {
@@ -183,7 +183,7 @@ namespace
     {
         Parser parser;
         // [Change] real Server 생성자 (int port, const std::string& password) 호출
-        Server server(0, "testpass");
+        Server server(6667, "testpass");
 
         // 완전히 모르는 커맨드 -> 421
         // (미등록 상태면 isAllowedBeforeRegistration()에서 걸려 451이 먼저 나가므로,
@@ -306,7 +306,7 @@ namespace
     {
         Parser parser;
         // [Change] real Server 생성자 (int port, const std::string& password) 호출
-        Server server(0, "testpass");
+        Server server(6667, "testpass");
 
         // 자기 자신과 동일한 닉네임 재전송은 433이 아니라 no-op이어야 한다
         {
@@ -326,7 +326,7 @@ namespace
     void testPingCommandValidation()
     {
         Parser parser;
-        Server server(0, "testpass");
+        Server server(6667, "testpass");
 
         // 1. PING 파라미터 없음 -> 409 ERR_NOORIGIN
         {
@@ -419,7 +419,7 @@ namespace
     void testRegistrationErrorRecovery()
     {
         Parser parser;
-        Server server(0, "testpass");
+        Server server(6667, "testpass");
 
         // 시나리오 1: PASS 틀림 -> 세션 유지 및 미등록 상태 -> 올바른 PASS 전송 후 NICK/USER 수신 시 정상 등록
         {
