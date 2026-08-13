@@ -165,4 +165,4 @@ make re         # 완전 재빌드
 - **AI Assistants**:
   - **RFC Clarification**: RFC 1459 표준 규격의 메시지 포맷, 엣지 케이스 및 숫자 응답(Numeric Reply) 코드 확인.
   - **Test Script Assistance**: 회귀 테스트를 위한 파이썬 자동화 테스트 스크립트 작성 보조.
-  - **Refactoring Advice**: C++98 표준 문법 확인 및 코드 구조 정리 조언.
+  - **OOP & C++ Best Practices**: 객체지향 아키텍처 설계, C++98 관용구 및 모듈화 구조에 대한 조언.
