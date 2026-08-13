@@ -94,7 +94,12 @@ bool    Client::appendToOutBuffer(const std::string &data)
     if (m_outBuffer.size() > kMaxOutBufferSize
         || line.size() > kMaxOutBufferSize - m_outBuffer.size())
     {
-        markForDeletion();
+        if (!m_markedForDeletion)
+        {
+            markForDeletion();
+            m_outBuffer += "ERROR :Closing Link: " + m_nickname
+                         + "[" + m_ip + "] (SendQ exceeded)\r\n";
+        }
         return false;
     }
 

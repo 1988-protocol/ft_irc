@@ -136,7 +136,7 @@ make re         # 완전 재빌드
 
 - **Raw Protocol Testing (Netcat)**:
   ```bash
-  nc 127.0.0.1 6667
+  nc -C 127.0.0.1 6667
   ```
   접속 후 RFC 1459 규격에 맞춰 등록 핸드셰이크 명령어를 직접 입력합니다:
   ```text

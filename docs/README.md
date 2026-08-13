@@ -136,7 +136,7 @@ Launch the server by specifying a listening port (`1` - `65535`) and a network p
 
 - **Raw Protocol Testing (Netcat)**:
   ```bash
-  nc 127.0.0.1 6667
+  nc -C 127.0.0.1 6667
   ```
   Once connected, send the RFC 1459 registration handshake:
   ```text
