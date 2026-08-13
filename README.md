@@ -112,7 +112,7 @@ flowchart TD
 
 `include/`와 `src/`는 모듈별로 완벽하게 미러링된 구조를 갖습니다.
 
-```
+```text
 .
 ├── Makefile
 ├── README.md

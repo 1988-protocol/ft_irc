@@ -24,7 +24,7 @@
 
 #### 2. Directory Structure
 
-```
+```text
 .
 ├── Makefile
 ├── include/

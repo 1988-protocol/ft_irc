@@ -24,7 +24,7 @@ Created in **August 1988 by Jarkko Oikarinen** at the University of Oulu, Finlan
 
 #### 2. Directory Structure
 
-```
+```text
 .
 ├── Makefile
 ├── include/
@@ -84,7 +84,6 @@ Created in **August 1988 by Jarkko Oikarinen** at the University of Oulu, Finlan
 | | `KICK` | Ejects a user from a channel (Operator only) |
 | | `INVITE` | Invites a user to an invite-only channel (Operator only) |
 | **Messaging** | `PRIVMSG` | Sends private messages to individual users or broadcasts to channels |
-| | `NOTICE` | Sends notifications without generating error replies |
 
 #### 2. Supported Channel Modes
 
