@@ -49,14 +49,13 @@ void Parser::registerCommand(const std::string& name, ICommand* handler)
     m_commands[name] = handler;
 }
 
-// CAP(Capability Negotiation): IRCv3 규격에서 클라이언트가 서버의 확장 기능(SASL 인증, multi-prefix 등)을
-// 조회/협상하기 위해 사용합니다. Irssi 접속 시 `CAP LS 302`를 자동 전송하므로 인증 전 허용 목록에 추가했습니다.
-bool Parser::isAllowedBeforeRegistration(const std::string& command) const // 로그인 전에 사용가능한 명령어
+// 로그인 전에 사용가능한 명령어
+bool Parser::isAllowedBeforeRegistration(const std::string& command) const 
 {
     return command == "PASS" || command == "NICK" || command == "USER"
         || command == "QUIT" || command == "PING" || command == "PONG"
         || command == "CAP";
-}
+} 
 
 void Parser::process(Server& server, Client& client, const std::string& rawLine)
 {

@@ -196,44 +196,111 @@ def main():
         resp_bob_confirm = read_until_eof(s_bob)
         print("[Alice sees MODE +l 2]:")
         print(resp_alice.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "MODE #testchannel +l 2" in resp_alice, "MODE +l broadcast failed"
 
-        # 17. Ghost nickname test: 비정상 연결 종료 (QUIT 없이 소켓 강제 닫기)
-        # Alice가 QUIT 명령을 보내지 않고 TCP 연결이 끊기는 시나리오를 재현합니다.
-        # 이때 서버는 Quit::execute()를 거치지 않고 POLLHUP/EOF 경로로 Client를 정리해야 하며,
-        # 닉네임이 "고스트"로 남아있지 않아야 합니다.
-        print("\n--- Ghost nickname test: Alice socket closed without QUIT ---")
+        # 16.5 Multi-channel NICK broadcast & duplicate prevention test
+        # Alice and Bob join a second shared channel (#secondchan)
+        print("\n--- Alice and Bob join #secondchan ---")
+        s_alice.sendall(b"JOIN #secondchan\r\n")
+        s_bob.sendall(b"JOIN #secondchan\r\n")
+        time.sleep(0.1)
+        read_until_eof(s_alice)
+        read_until_eof(s_bob)
+
+        # Alice changes nickname to 'wonder' (<= 9 chars per RFC 1459)
+        print("\n--- Alice changes NICK to wonder across multiple shared channels ---")
+        s_alice.sendall(b"NICK :wonder\r\n")
+        time.sleep(0.1)
+        resp_alice_nick = read_until_eof(s_alice)
+        resp_bob_nick = read_until_eof(s_bob)
+        print("[Alice NICK response]:")
+        print(resp_alice_nick.strip())
+        print("[Bob sees Alice NICK change]:")
+        print(resp_bob_nick.strip())
+
+        assert "NICK :wonder" in resp_alice_nick, "Alice did not receive NICK confirmation"
+        assert ":alice!" in resp_bob_nick and " NICK :wonder\r\n" in resp_bob_nick, \
+            "Bob did not receive Alice's valid NICK broadcast"
+        # Duplicate prevention check: Bob must receive the NICK broadcast exactly ONCE despite 2 shared channels
+        assert resp_bob_nick.count("NICK :wonder") == 1, \
+            f"Expected exactly 1 NICK broadcast to Bob, but got {resp_bob_nick.count('NICK :wonder')}"
+
+        # Bob sends message to 'wonder'
+        print("\n--- Bob sends message to wonder ---")
+        s_bob.sendall(b"PRIVMSG wonder :Hi Wonder!\r\n")
+        time.sleep(0.1)
+        resp_alice_pm = read_until_eof(s_alice)
+        print("[Alice (wonder) receives PM]:")
+        print(resp_alice_pm.strip())
+        assert "PRIVMSG wonder :Hi Wonder!" in resp_alice_pm, "Alice did not receive PM to new nickname"
+
+        # Change nickname back to 'alice' for ghost nickname test
+        s_alice.sendall(b"NICK alice\r\n")
+        time.sleep(0.1)
+        read_until_eof(s_alice)
+        read_until_eof(s_bob)
+
+        # 16.6 Multi-channel QUIT broadcast & duplicate prevention test
+        print("\n--- Alice sends graceful QUIT across multiple shared channels ---")
+        s_alice.sendall(b"QUIT :Goodbye all!\r\n")
+        time.sleep(0.1)
+        resp_alice_quit = read_until_eof(s_alice)
+        resp_bob_quit = read_until_eof(s_bob)
+        print("[Alice QUIT response (ERROR closing link)]:")
+        print(resp_alice_quit.strip())
+        print("[Bob sees Alice QUIT broadcast]:")
+        print(resp_bob_quit.strip())
+
+        assert "ERROR :Closing Link: Goodbye all!" in resp_alice_quit, "Alice did not receive ERROR closing link"
+        assert ":alice!" in resp_bob_quit and " QUIT :Goodbye all!\r\n" in resp_bob_quit, \
+            "Bob did not receive Alice's valid QUIT broadcast"
+        # Duplicate prevention check: Bob must receive the QUIT broadcast exactly ONCE despite 2 shared channels
+        assert resp_bob_quit.count("QUIT :Goodbye all!") == 1, \
+            f"Expected exactly 1 QUIT broadcast to Bob, but got {resp_bob_quit.count('QUIT :Goodbye all!')}"
+
         s_alice.close()
-        s_alice = None  # 이미 닫힌 소켓 재닫기 방지용 플래그
-        time.sleep(0.5)  # 서버가 poll()에서 POLLHUP/EOF를 감지하고 disconnectClient()를 실행할 시간
+        s_alice = None
+        time.sleep(0.2)
 
-        # 18. Bob이 Alice의 해제된 닉네임을 획득
-        print("\n--- Bob acquires released nickname 'alice' after abrupt disconnect ---")
+        # 17. Bob acquires released nickname 'alice' after graceful QUIT
+        print("\n--- Bob acquires released nickname 'alice' after graceful QUIT ---")
         s_bob.sendall(b"NICK alice\r\n")
         time.sleep(0.1)
         resp_nick_take = read_until_eof(s_bob)
         print("[Bob NICK alice Response]:")
         print(resp_nick_take.strip())
-        assert "433" not in resp_nick_take, "Ghost nickname: server still thinks 'alice' is in use after abrupt disconnect"
+        assert "433" not in resp_nick_take, "Server still thinks 'alice' is in use after graceful QUIT"
 
-        # 19. 후속 검증: 닉네임 변경이 실제로 반영되었는지 양성(positive) 확인
-        # "433이 응답에 없다"만으로는 빈 응답(서버 무응답)도 통과하므로,
-        # 변경된 닉네임으로 후속 명령을 보내 서버가 정상 응답하는지 확인합니다.
-        # TODO(Server.cpp): 현재 서버가 NICK 변경 성공 시 별도 응답(예: :oldnick!user@host NICK :newnick)을
-        #   보내지 않기 때문에, 후속 PRIVMSG 에러 응답으로 닉네임 반영을 간접 검증합니다.
+        # 18. Positive assertion: verify NICK change took effect
         print("\n--- Positive assertion: verify NICK change took effect ---")
         s_bob.sendall(b"PRIVMSG nobody :ping\r\n")
         time.sleep(0.1)
         resp_confirm = read_until_eof(s_bob)
         print("[Bob (now alice) PRIVMSG nobody Response]:")
         print(resp_confirm.strip())
-        # 존재하지 않는 대상에게 PRIVMSG → 401 ERR_NOSUCHNICK "alice" 기준으로 응답해야 함
-        # 핵심: 서버가 Bob의 현재 닉네임을 "alice"로 인식하고 있다는 증거
-        assert "401" in resp_confirm, \
-            "Expected 401 ERR_NOSUCHNICK response to confirm server accepted NICK change (got empty or unexpected response)"
-        assert "alice" in resp_confirm, \
-            "Server should address the response to 'alice' (Bob's new nickname)"
+        assert "401" in resp_confirm, "Expected 401 ERR_NOSUCHNICK"
+        assert "alice" in resp_confirm, "Server should address the response to 'alice'"
+
+        # 19. Ghost nickname test: abrupt disconnect (Client 3 connects and closes without QUIT)
+        print("\n--- Ghost nickname test: Charlie socket closed abruptly without QUIT ---")
+        s_charlie = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_charlie.connect(("localhost", port))
+        s_charlie.setblocking(False)
+        s_charlie.sendall(f"PASS {password}\r\nNICK charlie\r\nUSER charlie 0 * :Charlie Real\r\n".encode())
+        time.sleep(0.1)
+        read_until_eof(s_charlie)
+
+        s_charlie.close()
+        s_charlie = None
+        time.sleep(0.5)
+
+        # Bob switches to 'charlie'
+        print("\n--- Bob acquires released nickname 'charlie' after abrupt disconnect ---")
+        s_bob.sendall(b"NICK charlie\r\n")
+        time.sleep(0.1)
+        resp_nick_charlie = read_until_eof(s_bob)
+        print("[Bob NICK charlie Response]:")
+        print(resp_nick_charlie.strip())
+        assert "433" not in resp_nick_charlie, "Ghost nickname: server still thinks 'charlie' is in use"
 
         # Cleanup sockets
         s_bob.close()
