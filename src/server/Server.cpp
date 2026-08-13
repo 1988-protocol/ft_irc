@@ -74,10 +74,9 @@ void Server::run(){
 
             int listenFd = m_listener.getFd();
             // POLLERR/POLLNVAL은 소켓 자체가 망가진 상태라 더 읽어봐야 의미가 없다 -> 즉시 정리.
-            // POLLHUP은 여기서 처리하면 안 된다. BSD/macOS는 상대가 FIN만 보낸 half-close에서도
-            // 수신 버퍼에 안 읽은 데이터가 남아 있는 채로 POLLIN|POLLHUP을 함께 올리기 때문에,
-            // 먼저 끊으면 그 데이터와 이미 큐에 쌓인 응답까지 통째로 버려진다.
-            // (`printf '...' | nc host port` 가 정확히 이 형태다)
+            // POLLHUP은 여기서 함께 처리하면 안 된다. 상대가 보낸 데이터가 아직 수신 버퍼에
+            // 남은 채로 POLLIN과 같이 올라올 수 있고, 먼저 끊으면 그 데이터와 이미 큐에 쌓인
+            // 응답까지 통째로 버려진다. (`printf '...' | nc host port` 가 이 형태다)
             if (re & (POLLERR | POLLNVAL) && fd != listenFd)
             {
                 disconnectClient(fd);
@@ -122,42 +121,35 @@ void Server::run(){
                 }
             }
             // 3) 상대가 연결을 닫음 (POLLIN/POLLOUT을 모두 처리한 뒤에 본다)
-            // POLLIN이 함께 올라온 경우는 위에서 이미 recv로 처리했다.
-            // 남은 데이터를 다 읽고 나면 recv가 0을 돌려주면서 그쪽에서 정리하므로,
-            // 여기서 미리 끊으면 4096바이트를 넘는 입력이 잘려 나간다.
-            // POLLHUP만 단독으로 올라오는 경우에만 정리한다. 이 분기가 없으면 아무도
-            // POLLHUP을 소비하지 않아 poll()이 계속 즉시 반환하는 busy loop가 된다.
-            if ((re & POLLHUP) && !(re & POLLIN) && fd != listenFd
-                && m_clients.find(fd) != m_clients.end())
+            //
+            // POLLHUP은 fd를 닫아야만 사라지는 상태 플래그다. 아무도 소비하지 않으면
+            // poll()이 계속 즉시 반환하는 busy loop가 되므로 여기서 반드시 끊어야 한다.
+            // 단, 아직 안 읽은 데이터가 남은 채로 올라올 수 있어서 recv 뒤에 판단한다.
+            //  - POLLIN이 없다  -> 더 읽을 것도 없으니 정리
+            //  - recv()가 0을 돌려줘 EOF가 확정됐다(needsDisconnect) -> 정리
+            //
+            // out에 응답이 남아 있어도 여기서는 종료를 미루지 않는다.
+            // 운영 환경인 Linux에서 POLLHUP은 sk_shutdown이 양방향 다 닫혔거나 TCP_CLOSE일 때만
+            // 올라온다. 상대가 FIN만 보낸 half-close는 POLLIN + recv()==0으로 오고 POLLHUP이 아니다.
+            // 즉 이 분기에 도달했다면 연결은 이미 죽어서 남은 응답을 전달할 방법이 없다.
+            // (참고: macOS는 half-close에도 POLLIN|POLLHUP을 올리면서 그 뒤로 POLLOUT을
+            //  아예 보고하지 않는다. 그래서 여기서 미루면 영영 오지 않을 POLLOUT을 기다리며
+            //  100% CPU로 도는 무한 루프가 된다)
+            if ((re & POLLHUP) && fd != listenFd)
             {
-                flushAndDisconnect(fd);
-                --i;
-                continue;
+                std::map<int, Client*>::iterator it = m_clients.find(fd);
+                if (it != m_clients.end()
+                    && (!(re & POLLIN) || it->second->needsDisconnect()))
+                {
+                    disconnectClient(fd);
+                    --i;
+                    continue;
+                }
             }
         }
         updateWriteEvents();
     }
     std::cout <<"\n[server] 종료합니다." << std::endl;
-}
-
-// 끊기 직전, out버퍼에 남은 응답을 보낼 수 있는 만큼 보내고 정리한다.
-// 소켓은 논블로킹이라 커널 송신 버퍼가 차면 send가 -1을 돌려주고 루프가 끝난다 -> 블로킹되지 않는다.
-// (errno는 보지 않는다. 더 못 보내는 상황이면 어차피 곧 닫을 fd라 실패 원인을 구분할 이유가 없다)
-void Server::flushAndDisconnect(int fd)
-{
-    std::map<int, Client*>::iterator it = m_clients.find(fd);
-    if (it == m_clients.end())
-        return;
-
-    std::string &out = it->second->getOutBuffer();
-    while (!out.empty())
-    {
-        ssize_t n = send(fd, out.c_str(), out.size(), 0);
-        if (n <= 0)
-            break;
-        out.erase(0, n);
-    }
-    disconnectClient(fd);
 }
 
 void Server::disconnectClient(int fd)
@@ -249,10 +241,19 @@ void Server::receiveFromClient(int fd)
 
     if (recv_len == 0)
     {
-        // 상대가 정상적으로 연결을 닫음.
-        // 쓰기 쪽만 닫은 half-close라면 읽기 쪽은 살아 있어서 아직 응답을 받을 수 있다.
-        // 마지막 명령의 응답이 out버퍼에 남아 있을 수 있으므로 한 번 밀어내고 정리한다.
-        flushAndDisconnect(fd);
+        // 상대가 쓰기 쪽을 닫았다(FIN). Linux에서 half-close는 POLLHUP이 아니라
+        // 이 경로로 들어온다. 상대의 읽기 쪽은 아직 살아 있어서 응답을 받을 수 있으므로,
+        // 여기서 바로 끊지 않고 "다 보내면 끊어라" 표시만 남긴다.
+        // out이 남아 있으면 fd를 살려둔 채 다음 POLLOUT을 기다리고,
+        // sendToClient()가 out을 비운 뒤 needsDisconnect()를 보고 정리한다.
+        // (poll 한 번에 send 한 번 규칙을 지키려면 여기서 직접 밀어내면 안 된다)
+        std::map<int, Client*>::iterator it = m_clients.find(fd);
+        if (it == m_clients.end())
+            return;
+
+        it->second->markForDeletion();
+        if (!it->second->hasPendingOutput())
+            disconnectClient(fd);
         return;
     }
 

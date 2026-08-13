@@ -33,7 +33,6 @@ class Server{
         void acceptNewClient();
         void receiveFromClient(int fd);
         void sendToClient(int fd);
-        void flushAndDisconnect(int fd);
         void disconnectClient(int fd);
         
         void setSignal();
