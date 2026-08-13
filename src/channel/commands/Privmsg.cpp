@@ -80,7 +80,7 @@ void Privmsg::execute(Server& server, Client& client, const Message& msg)
                 }
             }
         }
-        // 4. 수신자가 User 개인일 경우
+        // 수신자가 User 개인일 경우
         else
         {
             Client* targetClient = server.getClientByNick(targetName);
