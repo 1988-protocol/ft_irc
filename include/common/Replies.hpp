@@ -1,10 +1,6 @@
 #ifndef REPLIES_HPP
 #define REPLIES_HPP
 
-// [8/13 333, 334 미사용 발견]
-// RFC 1459 2.4절 numeric reply 코드 중 Parser의 Phase1 범위(PASS/NICK/USER 등록 시퀀스와
-// 디스패처 실패 경로)에서 실제로 필요한 것만 정의한다. 001~004 서버 배너, 409(ERR_NOORIGIN) 등은
-// 지금 당장 쓰이지 않으므로 추측성으로 미리 추가하지 않는다 — 필요해지는 시점에 추가한다.
 namespace Numeric
 {
     const int RPL_WELCOME          = 1;    // 등록 완료(PASS+NICK+USER 모두 성공) 시 1회 전송
