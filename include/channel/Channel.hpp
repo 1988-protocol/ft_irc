@@ -27,7 +27,7 @@ public:
     std::string getName() const;
     std::string getTopic() const;
     std::string getKey() const;
-    std::string getModeString() const; // 현재 모드 상태 문자열 반환 (예: "+itk")
+    std::string getModeString() const; // 현재 모드 상태 문자열 반환
     const std::map<Client *, bool>& getMembers() const;
 
     void setTopic(std::string topic);

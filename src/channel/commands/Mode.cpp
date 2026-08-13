@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <sstream>
 
+//RFC 1459 4.2.3.1
+
 Mode::Mode() : ICommand() {}
 
 Mode::~Mode() {}
@@ -24,14 +26,8 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    // 명령어: MODE / 파라미터: <channel> {[+|-]|o|l|i|t|k} [<limit>] [<user(닉네임)>]
-    std::string channelName = params[0];
-
-    // 파라미터 없거나 채널명이 아닐 경우 리턴
-    if (channelName.empty())
-        return;
-
     // 채널 존재 여부 확인
+    std::string channelName = params[0];
     Channel* channel = server.getChannel(channelName);
     if (!channel) {
         client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHCHANNEL, target, channelName + " :No such channel"));
@@ -68,7 +64,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    // 모드 변경 시도 시 방장(Operator) 권한 확인
+    // 모드 변경 시도 시 방장 권한 확인
     if (!channel->isOperator(&client)) {
         client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, target, channelName + " :You're not channel operator"));
         return;
@@ -81,8 +77,8 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     bool isAdding = (modeStr[0] == '+');
     size_t paramIdx = 2; // 추가 인자가 위치할 인덱스
 
-    std::string appliedModes = ""; // 실제 적용된 모드 기호 모음 (예: "+itk")
-    std::string appliedArg = ""; // 브로드캐스트용 추가 인자 저장 변수 (예: "secret user2")
+    std::string appliedModes = ""; // 실제 적용된 모드 기호 모음
+    std::string appliedArg = ""; // 추가 인자 저장 변수
 
     for (size_t i = 0; i < modeStr.size(); ++i)
     {
@@ -103,20 +99,20 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                 appliedModes += '-';
             continue;
         }
-        // 6. 모드 플래그별 분기 처리
+        // 모드 플래그별 분기 처리
         switch (modeFlag)
         {
-            case 'i': // Invite Only
+            case 'i':
                 channel->setInviteOnly(isAdding);
                 appliedModes += 'i';
                 break;
 
-            case 't': // Topic Op Only
+            case 't':
                 channel->setTopicOpOnly(isAdding);
                 appliedModes += 't';
                 break;
 
-            case 'k': // Key (+k password / -k)
+            case 'k':
                 if (isAdding)
                 {
                     if (params.size() <= paramIdx)
@@ -125,6 +121,12 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         continue;
                     }
                     std::string keyArg = params[paramIdx++];
+                    // 이미 비밀번호가 설정되어 있는 경우 변경 차단 (-k 이후 다시 +k 해야함)
+                    if (!channel->getKey().empty())
+                    {
+                        client.appendToOutBuffer(reply(Numeric::ERR_KEYSET, target, channelName + " :Channel key already set"));
+                        continue;
+                    }
                     channel->setKey(keyArg);
                     appliedModes += 'k';
                     appliedArg += " " + keyArg;
@@ -136,7 +138,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                 }
                 break;
 
-            case 'l': // User Limit (+l 10 / -l)
+            case 'l':
                 if (isAdding)
                 {
                     if (params.size() <= paramIdx) 
@@ -162,7 +164,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                 }
                 break;
 
-            case 'o': // Operator 권한 부여/박탈 (+o target / -o target)
+            case 'o':
                 {
                     if (params.size() <= paramIdx)
                     {
@@ -171,14 +173,20 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                     }
                     std::string targetNick = params[paramIdx++];
                     Client* targetClient = server.getClientByNick(targetNick);
+
+                    if (!targetClient)
+                    {
+                        client.appendToOutBuffer(reply(Numeric::ERR_NOSUCHNICK, target, targetNick + " :No such nick/channel"));
+                        continue;
+                    }
                 
-                    if (!targetClient || !channel->isMember(targetClient))
+                    if (!channel->isMember(targetClient))
                     {
                         client.appendToOutBuffer(reply(Numeric::ERR_USERNOTINCHANNEL, target, targetNick + " " + channelName + " :They aren't on that channel"));
                         continue;
                     }
 
-                    if (isAdding) channel->addOperator(targetClient); //chanel에 
+                    if (isAdding) channel->addOperator(targetClient);
                     else channel->removeOperator(targetClient);
                     appliedModes += 'o';
                     appliedArg += " " + targetNick;
