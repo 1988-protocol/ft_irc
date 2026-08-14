@@ -35,7 +35,8 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 인자가 채널명 하나만 들어온 경우: 단순 모드 상태 조회
-    if (params.size() == 1) {
+    if (params.size() == 1) 
+    {
         std::string modeStr = channel->getModeString();
         std::string modeParams = "";
 
@@ -59,13 +60,15 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     }
 
     // 명령 요청 유저가 채널 멤버인지 확인
-    if (!channel->isMember(&client)) {
+    if (!channel->isMember(&client)) 
+    {
         client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
         return;
     }
 
     // 모드 변경 시도 시 방장 권한 확인
-    if (!channel->isOperator(&client)) {
+    if (!channel->isOperator(&client)) 
+    {
         client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, target, channelName + " :You're not channel operator"));
         return;
     }
