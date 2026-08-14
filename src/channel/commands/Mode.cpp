@@ -93,8 +93,18 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
     }
 
     std::string modeStr = params[1];
-    if (modeStr.size() < 2 || (modeStr[0] != '+' && modeStr[0] != '-')) 
+
+    if (modeStr.size() < 2)
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
         return;
+    }
+    
+    if (modeStr[0] != '+' && modeStr[0] != '-')
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_UNKNOWNMODE, target, std::string(1, modeStr[0]) + " :is unknown mode char to me"));
+        return;
+    }
 
     bool isAdding = false;
     size_t paramIdx = 2; // 추가 인자가 위치할 인덱스
