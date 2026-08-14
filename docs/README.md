@@ -150,6 +150,16 @@ Launch the server by specifying a listening port (`1` - `65535`) and a network p
 
 ---
 
+## Team & Responsibilities
+
+| Member | Role | Key Responsibilities |
+| :--- | :--- | :--- |
+| **jooyepar** | **Network Layer** | Non-blocking TCP socket management, `poll()` I/O multiplexing, connection lifecycles, and stream buffers. |
+| **borlee** | **Parser Layer** | RFC 1459 message parsing, command dispatching, registration handshake (`PASS`, `NICK`, `USER`), and control commands (`QUIT`, `PING`, `PONG`). |
+| **mjoh** | **Channel Layer** | Channel lifecycle & member management, channel modes (`+i`, `+t`, `+k`, `+o`, `+l`), and channel commands (`JOIN`, `PART`, `INVITE`, `KICK`, `TOPIC`, `PRIVMSG`). |
+
+---
+
 ## Resources & AI Usage
 
 ### References
