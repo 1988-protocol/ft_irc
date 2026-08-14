@@ -240,4 +240,8 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
             it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + appliedModes + appliedArg, ""));
         }
     }
+    else
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
+    }
 }
