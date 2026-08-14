@@ -12,19 +12,19 @@
 
 namespace 
 {
-    void appendAppliedMode(std::string& appliedModes, bool isAdding, char modeFlag)
+    void appendAppliedMode(std::string& appliedModes, std::string& lastSign, bool isAdding, char modeFlag)
     {
-        char currentSign;
+        std::string currentSign;
         if (isAdding)
-            currentSign = '+';
+            currentSign = "+";
         else
-            currentSign = '-';
-        if (appliedModes.empty())
+            currentSign = "-";
+
+        if (lastSign != currentSign)
+        {
             appliedModes += currentSign;
-        else if (appliedModes[appliedModes.size() - 1] == '+' || appliedModes[appliedModes.size() - 1] == '-')
-            appliedModes[appliedModes.size() - 1] = currentSign;
-        else if (appliedModes[appliedModes.size() - 1] != currentSign)
-            appliedModes += currentSign;
+            lastSign = currentSign; // 현재 부호로 기록 갱신
+        }
         appliedModes += modeFlag;
     }
 }
@@ -101,6 +101,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
 
     std::string appliedModes = ""; // 실제 적용된 모드 기호 모음
     std::string appliedArg = ""; // 추가 인자 저장 변수
+    std::string lastSign = "";
 
     for (size_t i = 0; i < modeStr.size(); ++i)
     {
@@ -122,12 +123,12 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         {
             case 'i':
                 channel->setInviteOnly(isAdding);
-                appendAppliedMode(appliedModes, isAdding, 'i');
+                appendAppliedMode(appliedModes, lastSign, isAdding, 'i');
                 break;
 
             case 't':
                 channel->setTopicOpOnly(isAdding);
-                appendAppliedMode(appliedModes, isAdding, 't');
+                appendAppliedMode(appliedModes, lastSign, isAdding, 't');
                 break;
 
             case 'k':
@@ -146,13 +147,13 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         continue;
                     }
                     channel->setKey(keyArg);
-                    appendAppliedMode(appliedModes, isAdding, 'k');
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'k');
                     appliedArg += " " + keyArg;
                 }
                 else
                 {
                     channel->removeKey();
-                    appendAppliedMode(appliedModes, isAdding, 'k');
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'k');
                 }
                 break;
 
@@ -172,13 +173,13 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         continue;
                     }
                     channel->setUserLimit(limit);
-                    appendAppliedMode(appliedModes, isAdding, 'l');
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'l');
                     appliedArg += " " + params[paramIdx++];
                 }
                 else
                 {
                     channel->removeUserLimit();
-                    appendAppliedMode(appliedModes, isAdding, 'l');
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'l');
                 }
                 break;
 
@@ -208,7 +209,7 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         channel->addOperator(targetClient);
                     else
                         channel->removeOperator(targetClient);
-                    appendAppliedMode(appliedModes, isAdding, 'o');
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'o');
                     appliedArg += " " + targetNick;
                 }
                 break;
