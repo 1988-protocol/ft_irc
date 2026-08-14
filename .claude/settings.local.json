@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep -E \"^\\(obj/|ircserv|.*\\\\.o$|.*\\\\.d$\\)\")",
-      "Bash(echo \"--- exit $? ---\")"
-    ]
-  }
-}
