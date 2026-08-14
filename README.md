@@ -208,13 +208,14 @@ make test_irssi
 
 ---
 
-## 📅 Roadmap & Milestones
 
-- [x] **Week 1~2 (Interface & Skeleton)**: 소켓 논블로킹 I/O, `poll()` 이벤트 루프, 기본 메시지 파싱 및 등록 시퀀스
-- [x] **Week 3~4 (Core Features & Integration)**: 채널 생성/관리, 커맨드 핸들러 완성, 다중 클라이언트 1차 통합
-- [ ] **Week 5 (Edge Cases & QA)**: 모드 제어 세부 구현, 메모리/fd 누수 점검(`valgrind`), 방어 평가(Defense) 대비
+## 👥 Team & Roles
 
-📋 **세부 일정 및 작업 분담**: [PLAN.md](docs/PLAN.md)
+| 팀원 | 담당 영역 | 핵심 역할 |
+| :--- | :--- | :--- |
+| **jooyepar** | **네트워크 계층** | 논블로킹 TCP 소켓 생명주기 관리, `poll()` I/O 멀티플렉싱, 연결 관리 및 송수신 버퍼 스트림 처리 |
+| **borlee** | **파서 계층** | RFC 1459 메시지 파싱, 명령어 디스패칭, 등록 시퀀스(`PASS`, `NICK`, `USER`) 검증 및 세션 제어(`QUIT`, `PING`, `PONG`) |
+| **mjoh** | **채널 계층** | 채널 생명주기 및 멤버십 관리, 채널 모드(`+i`, `+t`, `+k`, `+o`, `+l`), 채널 명령어(`JOIN`, `PART`, `INVITE`, `KICK`, `TOPIC`, `PRIVMSG`) 구현 |
 
 ---
 

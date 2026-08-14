@@ -18,8 +18,12 @@ Nick& Nick::operator=(const Nick& other)
 }
 Nick::~Nick() {}
 
+
+
 void Nick::execute(Server& server, Client& client, const Message& msg)
 {
+    // =============================================================================
+    // 파라미터 추출 및 유효성 검증
     std::string target = client.getNickname().empty() ? "*" : client.getNickname();
 
     std::string nickname = "";
@@ -50,6 +54,9 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
+    // =============================================================================
+    // 상태 갱신, 등록 처리 
+
     // 1. 변경 전 등록 상태 및 메시지 스냅샷 (기존 buildMessage 재활용)
     const bool wasRegistered = client.isRegistered();
     std::string nickMsg = "";
@@ -68,7 +75,10 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
         client.appendToOutBuffer(reply(Numeric::RPL_WELCOME, nickname, ":Welcome to the IRC network, " + nickname));
     }
 
-    // 4. 이미 등록된 클라이언트가 닉네임을 변경한 경우 브로드캐스트 (본인 + 공유 채널 멤버, 중복 제거)
+
+    // =============================================================================
+    // 공유 채널 탐색, 브로드캐스트
+    // 이미 등록된 클라이언트가 닉네임을 변경한 경우 브로드캐스트 (본인 + 공유 채널 멤버, 중복 제거)
     if (wasRegistered && !nickMsg.empty())
     {
         std::set<Client*> recipients;
@@ -81,8 +91,8 @@ void Nick::execute(Server& server, Client& client, const Message& msg)
             {
                 const std::map<Client*, bool>& members = it->second->getMembers();
                 for (std::map<Client*, bool>::const_iterator mIt = members.begin(); mIt != members.end(); ++mIt)
-                {
-                    if (mIt->first)
+                { // client*: 채널에 참여중인 유저 객체 포인터
+                    if (mIt->first) // bool: 해당 유저의 방장 권한 여부
                         recipients.insert(mIt->first);
                 }
             }

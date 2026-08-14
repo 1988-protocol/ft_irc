@@ -57,7 +57,7 @@ bool    Client::extractLine(std::string &out)
             markForDeletion();
         return false;
     }
-    if (pos > 512)
+    if (pos > 511)
     {
         markForDeletion();
         return false;

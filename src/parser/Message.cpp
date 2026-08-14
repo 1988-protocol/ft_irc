@@ -47,7 +47,7 @@ void Message::setTrailing(const std::string& trailing)
     m_trailing = trailing;
     m_hasTrailing = true;
 }
-
+// 
 // RFC1459 2.3.1 문법(단, \r\n은 Network가 이미 제거했다고 가정):
 //   message    = [ ":" prefix SPACE ] command [ params ] crlf
 //   params     = *14( SPACE middle ) [ SPACE ":" trailing ]
@@ -103,12 +103,12 @@ Message Message::parse(const std::string& rawLine)
         // 다음 파싱할 시작점을 공백 뒤의 유효한 문자로 이동
         i = line.find_first_not_of(' ', next_space);
     }
-    if (i == std::string::npos)
+    if (i == std::string::npos) // 공백만 잔뜩..
         return msg;
 
     // 3. Command 파싱
-    std::string::size_type cmd_end = line.find(' ', i);
-    if (cmd_end == std::string::npos)
+    std::string::size_type cmd_end = line.find(' ', i); // 검색의 시작 위치
+    if (cmd_end == std::string::npos) // 명령어만 있는 경우
     {
         msg.setCommand(line.substr(i));
         return msg;
@@ -119,7 +119,7 @@ Message Message::parse(const std::string& rawLine)
     // 4. Params 파싱 루프 (최대 14개 수집)
     while (i != std::string::npos && msg.getParams().size() < 14)
     {
-        // 공백 뒤에 바로 ':'이 오면 trailing 마커입니다.
+        // 공백 뒤에 바로 ':'이 오면 trailing 마커.
         // 콜론 뒤의 모든 문자를 trailing으로 저장 (빈 문자열 ":" 만 전송된 경우도 hasTrailing() == true 처리)
         if (line[i] == ':')
         {
