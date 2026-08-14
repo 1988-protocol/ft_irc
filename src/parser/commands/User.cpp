@@ -14,11 +14,22 @@ User& User::operator=(const User& other)
 }
 User::~User() {}
 
-// RFC1459 4.1.3 USER: "<username> <hostname> <servername> :<realname>" — middle 파라미터
-// 3개 + trailing 1개가 필요하다. hostname/servername은 RFC상으로도 서버가 신뢰하지 않고
-// 직접 판단하는 값이라 실사용하지 않으며, realname을 저장할 필드도 Client.hpp 제안
-// 초안(Parser가 실제로 쓰는 필드만 담음) 범위 밖이라 지금은 개수 검증만 하고 버린다.
-// username만 저장한다
+// RFC 1459 Section 4.1.3 (USER 명령어)
+// Command: USER
+// Parameters: <username> <hostname> <servername> <realname> - middle 파라미터 3개 + trailing 1개
+//
+// 1. 기본 목적:
+//    USER 메시지는 연결 초기에 신규 유저의 username, hostname, servername, realname을
+//    지정하는 데 사용됩니다. 클라이언트로부터 NICK과 USER가 모두 수신되어야만
+//    유저 등록(001 RPL_WELCOME)이 완료됩니다.
+//
+// 2. hostname 및 servername 무시 (보안상 이유):
+//    직접 연결된 클라이언트가 보낸 USER 명령어에서 hostname과 servername은
+//    보안상의 이유로 IRC 서버가 일반적으로 무시합니다 (서버가 소켓 IP 등으로 직접 판단).
+//
+// 3. realname (마지막 파라미터):
+//    realname은 공백 문자를 포함할 수 있으므로 반드시 마지막 파라미터
+//
 void User::execute(Server& server, Client& client, const Message& msg)
 {
     (void)server;
@@ -30,13 +41,7 @@ void User::execute(Server& server, Client& client, const Message& msg)
         client.appendToOutBuffer(reply(Numeric::ERR_ALREADYREGISTRED, target, ":You may not reregister"));
         return;
     }
-    // 이 부분은 체크 필요함, 왜냐하면 real_name이 들어가지 않아서 정말 4개가 필요하지 않을수도?
-    // 인자 부족(461 ERR_NEEDMOREPARAMS) 시 에러 응답 후 세션을 끊지 않고 리턴하여
-    // 클라이언트가 올바른 USER 파라미터를 재전송할 때까지 인증 대기 상태를 유지합니다.
 
-    // != 3 과 < 4 중 어느것을 해야 할 지 고민했는데요
-    // 최소 개수 이상의 파라미터가 들어오면 에러가 아니라 앞의 4개만 사용하고 남는 인자를 무시하는 것으로 처리하기 위해
-    // < 4 로 수정했습니다.
     size_t totalParams = msg.getParams().size() + (msg.hasTrailing() ? 1 : 0);
     if (totalParams < 4)
     {

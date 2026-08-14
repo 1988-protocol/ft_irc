@@ -347,6 +347,44 @@ def main():
             "Eve did not receive Dave's PART broadcast"
         print("-> self-echo 방지 + PART 브로드캐스트 SUCCESS!")
 
+        # 20.5 [검증] 채널명 대소문자 무시 (Case-insensitive: #CaseChannel vs #casechannel vs #CASECHANNEL)
+        print("\n--- [검증] 채널명 대소문자 무시 지원 (#CaseChannel vs #casechannel) ---")
+        s_dave.sendall(b"JOIN #CaseChannel\r\n")
+        time.sleep(0.1)
+        resp_dave_join = read_until_eof(s_dave)
+        assert "JOIN #CaseChannel" in resp_dave_join, "Dave failed to join #CaseChannel"
+
+        # Eve가 소문자 #casechannel로 입장 (동일 채널로 연결되어야 함)
+        s_eve.sendall(b"JOIN #casechannel\r\n")
+        time.sleep(0.1)
+        resp_eve_join = read_until_eof(s_eve)
+        resp_dave_see_eve = read_until_eof(s_dave)
+        print("[Eve JOIN #casechannel response]:")
+        print(resp_eve_join.strip())
+        print("[Dave sees Eve join]:")
+        print(resp_dave_see_eve.strip())
+        assert "eve!eve@" in resp_dave_see_eve and "JOIN" in resp_dave_see_eve, \
+            "Dave did not see Eve join the same case-insensitive channel"
+
+        # Eve가 대문자 #CASECHANNEL로 PRIVMSG 전송 -> Dave가 수신해야 함
+        s_eve.sendall(b"PRIVMSG #CASECHANNEL :Hello case insensitivity!\r\n")
+        time.sleep(0.1)
+        resp_dave_privmsg = read_until_eof(s_dave)
+        print("[Dave receives message from Eve via #CASECHANNEL]:")
+        print(resp_dave_privmsg.strip())
+        assert "eve!eve@" in resp_dave_privmsg and "PRIVMSG #CASECHANNEL :Hello case insensitivity!" in resp_dave_privmsg, \
+            "Dave did not receive PRIVMSG sent to uppercase channel name"
+
+        # Dave가 소문자 #casechannel로 PART -> Eve가 수신해야 함
+        s_dave.sendall(b"PART #casechannel :bye\r\n")
+        time.sleep(0.1)
+        resp_eve_see_part = read_until_eof(s_eve)
+        print("[Eve sees Dave PART via #casechannel]:")
+        print(resp_eve_see_part.strip())
+        assert "dave!dave@" in resp_eve_see_part and "PART" in resp_eve_see_part, \
+            "Eve did not see Dave PART with different casing"
+        print("-> 채널명 대소문자 무시 (Case-insensitive) SUCCESS!")
+
         # 21. [실험] 512바이트(RFC1459 2.3 CRLF 포함 라인 한도) 초과 라인 → 응답 없이 즉시 연결 종료
         #     (Client::extractLine, src/client/Client.cpp)
         print("\n--- [실험] 512바이트 초과 라인 전송 시 즉시 연결 종료 확인 ---")

@@ -85,15 +85,6 @@ namespace Utils
         return result;
     }
 
-    std::string trim(const std::string& s)
-    {
-        std::string::size_type start = s.find_first_not_of(' ');
-        if (start == std::string::npos)
-            return "";
-        std::string::size_type end = s.find_last_not_of(' ');
-        return s.substr(start, end - start + 1);
-    }
-
     std::string toUpper(const std::string& s)
     {
         std::string result = s;

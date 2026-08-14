@@ -18,20 +18,13 @@ std::string reply(int code, const std::string& target, const std::string& msg);
 // Channel commands에서 Braodcasting Message를 build 해주는 함수
 std::string buildMessage(const Client& client, const std::string& cmd, const std::string& target, const std::string& msg = "");
 
-// 서버 식별 이름을 반환한다. Server 클래스가 아직 실구현되지 않은 상태(Network Phase1 몫)라
-// 임시 상수를 감싸 반환하는 함수로 두었다 — 실제 호스트명이 필요해지면 이 함수 내부만 바뀌면 된다.
 std::string getServerName();
 
-// Message::parse()와 각 커맨드의 파라미터 검증에서 공통으로 쓰는 문자열 유틸리티.
-// C++98이라 std::to_string이 없으므로 숫자<->문자열 변환도 필요하면 여기 추가한다.
 namespace Utils
 {
     // 하나 이상 연속된 delim을 하나의 구분자로 취급해 분리한다(중복 공백 대응).
     // 빈 조각은 결과에 포함하지 않는다.
     std::vector<std::string> split(const std::string& s, char delim);
-
-    // 문자열 앞뒤의 공백류(space)만 제거한다. 내부 공백은 보존한다.
-    std::string trim(const std::string& s);
 
     // 비ASCII 문자 입력 시 std::toupper의 정의되지 않은 동작(UB)을 방지하기 위한 안전한 대문자 변환 함수.
     inline char safeToUpper(char c)
