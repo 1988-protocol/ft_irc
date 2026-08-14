@@ -1,5 +1,6 @@
 import errno
 import socket
+import threading
 import time
 
 def read_until_eof(sock, timeout=0.5, idle_timeout=0.08):
@@ -46,5 +47,23 @@ def read_until_eof(sock, timeout=0.5, idle_timeout=0.08):
         time.sleep(0.01)
 
     return raw_bytes.decode('utf-8', errors='replace')
+
+
+def drain_process_output(proc):
+    """
+    subprocess.PIPE로 연결된 자식 프로세스의 stdout/stderr를 아무도 읽지 않으면
+    파이프 커널 버퍼(리눅스 기본 64KB)가 가득 찼을 때 자식 프로세스의 write()가
+    블로킹되어 서버 전체가 멈출 수 있다. ircserv는 처리한 라인마다 stdout에 로그를
+    남기므로, 대량 트래픽을 보내는 테스트에서 이 데드락이 실제로 발생한다.
+    데몬 스레드로 계속 읽어서 버리며 파이프가 절대 차지 않도록 한다.
+    """
+    def _drain(stream):
+        for _ in iter(lambda: stream.readline(), b''):
+            pass
+
+    for stream in (proc.stdout, proc.stderr):
+        if stream is not None:
+            t = threading.Thread(target=_drain, args=(stream,), daemon=True)
+            t.start()
 
 

@@ -166,4 +166,4 @@ In compliance with the 42 curriculum requirements, AI tools were transparently u
 - **AI Assistants**:
   - **RFC Clarification**: Looking up message formats, edge cases, and numeric reply codes in RFC 1459.
   - **Test Script Assistance**: Writing Python test scripts for regression testing.
-  - **Refactoring Advice**: Consulting on C++98 syntax and clean code organization.
+  - **OOP & C++ Best Practices**: Consulting on object-oriented architecture, C++98 idioms, and modular design principles.

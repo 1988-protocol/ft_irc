@@ -5,7 +5,7 @@ import subprocess
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_utils import read_until_eof
+from test_utils import read_until_eof, drain_process_output
 
 def main():
     print("=== Starting IRC Integration Test ===")
@@ -14,10 +14,16 @@ def main():
     port = 10001
     password = "testpassword"
     server_process = subprocess.Popen(["./ircserv", str(port), password], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    drain_process_output(server_process)  # stdout 파이프가 안 읽혀서 서버가 멈추는 것을 방지
     time.sleep(0.5) # Wait for server to bind and start listening
 
     s_alice = None
     s_bob = None
+    s_dave = None
+    s_eve = None
+    s_oversize = None
+    s_flooder = None
+    s_sink = None
     try:
         # 2. Connect Alice (Client 1)
         s_alice = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,13 +79,12 @@ def main():
         print(resp_bob.strip())
         assert "JOIN #testchannel" in resp_bob, "Bob JOIN failed"
         
-        # Alice should also see Bob join (broadcast check - commented until Server.cpp network event loop update)
+        # Alice should also see Bob join (broadcast check)
         time.sleep(0.1)
         resp_alice = read_until_eof(s_alice)
         print("[Alice sees Bob join]:")
         print(resp_alice.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "bob!bob@127.0.0.1 JOIN #testchannel" in resp_alice or "bob!bob@localhost JOIN #testchannel" in resp_alice or "JOIN #testchannel" in resp_alice, "Alice did not see Bob join"
+        assert "bob!bob@127.0.0.1 JOIN #testchannel" in resp_alice or "bob!bob@localhost JOIN #testchannel" in resp_alice or "JOIN #testchannel" in resp_alice, "Alice did not see Bob join"
 
         # 6. Alice sets TOPIC
         print("\n--- Alice sets topic ---")
@@ -91,8 +96,7 @@ def main():
         print(resp_alice.strip())
         print("[Bob sees TOPIC update]:")
         print(resp_bob.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "TOPIC #testchannel :New Project Topic" in resp_bob, "Bob did not see topic update"
+        assert "TOPIC #testchannel :New Project Topic" in resp_bob, "Bob did not see topic update"
 
         # 7. Alice enables +t (topic op only), then Bob tries to change TOPIC (should fail)
         print("\n--- Bob tries to change topic (should fail) ---")
@@ -113,8 +117,7 @@ def main():
         resp_bob = read_until_eof(s_bob)
         print("[Bob receives channel message]:")
         print(resp_bob.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "PRIVMSG #testchannel :Hello team!" in resp_bob, "Bob did not receive broadcast"
+        assert "PRIVMSG #testchannel :Hello team!" in resp_bob, "Bob did not receive broadcast"
 
         # 9. 1:1 PRIVMSG
         print("\n--- Bob sends direct PRIVMSG to Alice ---")
@@ -123,8 +126,7 @@ def main():
         resp_alice = read_until_eof(s_alice)
         print("[Alice receives direct message]:")
         print(resp_alice.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "PRIVMSG alice :Hi Alice, PM check." in resp_alice, "Alice did not receive PM"
+        assert "PRIVMSG alice :Hi Alice, PM check." in resp_alice, "Alice did not receive PM"
 
         # 10. KICK Banned target (Alice kicks Bob)
         print("\n--- Alice kicks Bob ---")
@@ -136,8 +138,7 @@ def main():
         print(resp_bob.strip())
         print("[Alice sees kick confirmation]:")
         print(resp_alice.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "KICK #testchannel bob :You are kicked" in resp_bob, "Bob kick broadcast failed"
+        assert "KICK #testchannel bob :You are kicked" in resp_bob, "Bob kick broadcast failed"
 
         # 11. Mode +i (Invite only)
         print("\n--- Alice sets channel mode to Invite Only (+i) ---")
@@ -166,8 +167,7 @@ def main():
         print(resp_alice.strip())
         print("[Bob receives INVITE notification]:")
         print(resp_bob.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "INVITE bob" in resp_bob and "#testchannel" in resp_bob, "Bob did not receive INVITE"
+        assert "INVITE bob" in resp_bob and "#testchannel" in resp_bob, "Bob did not receive INVITE"
 
         # 14. Bob joins again (should succeed now after invitation)
         print("\n--- Bob joins channel after invitation ---")
@@ -185,8 +185,7 @@ def main():
         resp_bob = read_until_eof(s_bob)
         print("[Bob sees MODE +o]:")
         print(resp_bob.strip())
-        # Note: Requires multi-client POLLOUT broadcast support in Server.cpp
-        # assert "MODE #testchannel +o bob" in resp_bob, "MODE +o broadcast failed"
+        assert "MODE #testchannel +o bob" in resp_bob, "MODE +o broadcast failed"
 
         # 16. Bob sets client limit to 2 (+l 2)
         print("\n--- Bob sets channel client limit (+l 2) ---")
@@ -302,21 +301,149 @@ def main():
         print(resp_nick_charlie.strip())
         assert "433" not in resp_nick_charlie, "Ghost nickname: server still thinks 'charlie' is in use"
 
+        # 20. [실험] Dave/Eve: 채널 PRIVMSG는 발신자 본인에게 echo되면 안 된다 + PART 브로드캐스트
+        print("\n--- [실험] Dave/Eve: 채널 PRIVMSG self-echo 방지 + PART 브로드캐스트 ---")
+        s_dave = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_dave.connect(("localhost", port))
+        s_dave.setblocking(False)
+        s_dave.sendall(f"PASS {password}\r\nNICK dave\r\nUSER dave 0 * :Dave Real\r\n".encode())
+        time.sleep(0.1)
+        resp_dave = read_until_eof(s_dave)
+        assert "001 dave" in resp_dave, "Dave registration failed"
+
+        s_eve = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_eve.connect(("localhost", port))
+        s_eve.setblocking(False)
+        s_eve.sendall(f"PASS {password}\r\nNICK eve\r\nUSER eve 0 * :Eve Real\r\n".encode())
+        time.sleep(0.1)
+        resp_eve = read_until_eof(s_eve)
+        assert "001 eve" in resp_eve, "Eve registration failed"
+
+        s_dave.sendall(b"JOIN #experiment\r\n")
+        s_eve.sendall(b"JOIN #experiment\r\n")
+        time.sleep(0.1)
+        read_until_eof(s_dave)
+        read_until_eof(s_eve)
+
+        s_dave.sendall(b"PRIVMSG #experiment :self echo check\r\n")
+        time.sleep(0.1)
+        resp_dave_echo = read_until_eof(s_dave)
+        resp_eve_msg = read_until_eof(s_eve)
+        print("[Dave's own buffer right after his channel PRIVMSG]:")
+        print(repr(resp_dave_echo))
+        print("[Eve receives channel PRIVMSG]:")
+        print(resp_eve_msg.strip())
+        assert "PRIVMSG #experiment :self echo check" not in resp_dave_echo, \
+            "Server echoed the channel PRIVMSG back to the sender (should only reach other members)"
+        assert "dave!dave@" in resp_eve_msg and "PRIVMSG #experiment :self echo check" in resp_eve_msg, \
+            "Eve did not receive Dave's channel PRIVMSG"
+
+        s_dave.sendall(b"PART #experiment :bye\r\n")
+        time.sleep(0.1)
+        resp_eve_part = read_until_eof(s_eve)
+        print("[Eve sees Dave's PART]:")
+        print(resp_eve_part.strip())
+        assert "dave!dave@" in resp_eve_part and "PART #experiment :bye" in resp_eve_part, \
+            "Eve did not receive Dave's PART broadcast"
+        print("-> self-echo 방지 + PART 브로드캐스트 SUCCESS!")
+
+        # 21. [실험] 512바이트(RFC1459 2.3 CRLF 포함 라인 한도) 초과 라인 → 응답 없이 즉시 연결 종료
+        #     (Client::extractLine, src/client/Client.cpp)
+        print("\n--- [실험] 512바이트 초과 라인 전송 시 즉시 연결 종료 확인 ---")
+        s_oversize = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_oversize.connect(("localhost", port))
+        s_oversize.setblocking(False)
+        s_oversize.sendall(b"A" * 600)  # \r\n 없이 512바이트를 넘는 데이터만 전송
+        time.sleep(0.2)
+        resp_oversize = read_until_eof(s_oversize)
+        print(f"[Oversized-line response]: {resp_oversize!r} (빈 문자열이어야 함)")
+        assert resp_oversize == "", "Server should not reply to an oversized (>512 byte) line"
+        try:
+            trailing = s_oversize.recv(16)
+            assert trailing == b"", "Server kept the connection open instead of closing it"
+        except BlockingIOError:
+            raise AssertionError("Server did not disconnect the client after an oversized (>512 byte) line")
+        s_oversize.close()
+        s_oversize = None
+        print("-> 512바이트 초과 라인 처리 SUCCESS!")
+
+        # 22. [실험] out-buffer 64KB(SendQ) 한도 초과 시 강제 종료
+        #     (Client::appendToOutBuffer, src/client/Client.cpp) — sink는 절대 recv하지 않는 "느린 리더" 역할
+        print("\n--- [실험] 대상 클라이언트가 읽지 않는 상태에서 채널에 메시지를 대량 전송해 SendQ 초과 유도 ---")
+        s_flooder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s_flooder.connect(("localhost", port))
+        s_flooder.setblocking(False)
+        s_flooder.sendall(f"PASS {password}\r\nNICK flooder\r\nUSER flooder 0 * :Flooder\r\n".encode())
+        time.sleep(0.1)
+        resp_flooder = read_until_eof(s_flooder)
+        assert "001 flooder" in resp_flooder, "Flooder registration failed"
+
+        s_sink = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # 커널 수신 윈도우를 최소치로 줄여, sink가 안 읽는 동안 서버 쪽 로컬 송신 버퍼가
+        # 빨리 막히도록(backpressure) 유도한다 — 그래야 서버 소켓 기본 버퍼 크기(수백KB~)에
+        # 가려지지 않고 "안 읽는 클라이언트"에 대한 서버의 방어 로직을 현실적인 시간 안에 관찰할 수 있다.
+        s_sink.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024)
+        s_sink.connect(("localhost", port))
+        s_sink.setblocking(False)
+        s_sink.sendall(f"PASS {password}\r\nNICK sink\r\nUSER sink 0 * :Sink\r\n".encode())
+        time.sleep(0.1)
+        resp_sink = read_until_eof(s_sink)
+        assert "001 sink" in resp_sink, "Sink registration failed"
+
+        s_flooder.sendall(b"JOIN #flood\r\n")
+        s_sink.sendall(b"JOIN #flood\r\n")
+        time.sleep(0.1)
+        read_until_eof(s_flooder)
+        read_until_eof(s_sink)  # sink의 마지막 수신 - 이후로는 절대 recv하지 않는다 (버퍼를 쌓기 위함)
+
+        # 브로드캐스트 1건당 out-buffer에는 최대 512바이트(510B 본문 + CRLF)만 쌓인다(Client::appendToOutBuffer의
+        # kMaxLineBody 절단 때문). localhost는 RTT가 거의 0이라 커널 버퍼 몇백KB 정도로는 체감되는
+        # backpressure가 거의 없어(즉시 다 흘려보내짐), 실측상 sink가 전혀 안 읽는 상태에서도 서버가 결국
+        # 막히게 하려면 총량을 ~3MB(480B 메시지 6000개) 수준까지 올려야 한다(1MB로는 재현되지 않았음).
+        flood_payload = ("PRIVMSG #flood :" + ("X" * 480) + "\r\n") * 6000
+        try:
+            s_flooder.sendall(flood_payload.encode())
+        except BlockingIOError:
+            # 논블로킹 소켓의 로컬 송신 버퍼가 이미 가득 찼다는 뜻 — 그 자체로 서버 쪽
+            # backpressure를 유발하기에 충분한 양이 이미 전달된 것이므로 계속 진행한다.
+            pass
+
+        # sink가 읽지 않는 상태가 계속되면, 서버는 (a) SendQ 64KB 한도 초과로 스스로 끊거나
+        # (b) 로컬 송신 버퍼가 막혀 send()가 실패하는 즉시 끊거나, 둘 중 하나로 결국 sink 연결을
+        # 정리해야 한다 — black box 관점에서는 어느 경로든 "느린 리더가 서버를 무한정 막지 못한다"만 확인한다.
+        deadline = time.monotonic() + 5.0
+        disconnected = False
+        while time.monotonic() < deadline and not disconnected:
+            try:
+                chunk = s_sink.recv(65536)
+                if chunk == b"":
+                    disconnected = True
+                    break
+            except BlockingIOError:
+                time.sleep(0.05)
+        print(f"[Sink] 느린 리더 강제 종료 감지: {disconnected}")
+        assert disconnected, \
+            "서버가 out-buffer가 쌓인(느린 리더) 클라이언트를 끊지 않았다 (Client::appendToOutBuffer SendQ 방어 미동작)"
+        s_flooder.close()
+        s_flooder = None
+        s_sink.close()
+        s_sink = None
+        print("-> 느린 리더(non-draining client) 강제 종료 SUCCESS!")
+
         # Cleanup sockets
+        s_dave.close()
+        s_eve.close()
         s_bob.close()
         print("\n=== INTEGRATION TEST PASSED SUCCESSFULLY ===")
 
     finally:
-        # s_alice는 테스트 본문에서 이미 닫혔을 수 있으므로 안전하게 처리
-        if s_alice is not None:
-            try:
-                s_alice.close()
-            except Exception:
-                pass
-        try:
-            s_bob.close()
-        except Exception:
-            pass
+        # 테스트 본문에서 일부 소켓은 이미 닫혔을 수 있으므로 각각 안전하게 정리한다
+        for sock in (s_alice, s_bob, s_dave, s_eve, s_oversize, s_flooder, s_sink):
+            if sock is not None:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
         server_process.terminate()
         server_process.wait()
 
