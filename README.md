@@ -1,7 +1,10 @@
 # ft_irc
 
-> **RFC 1459 규격을 준수하는 C++98 기반 Internet Relay Chat (IRC) 서버**  
-> `poll()` 기반의 논블로킹 I/O 멀티플렉싱을 통해 다중 클라이언트의 동시 접속, 실시간 메시지 브로드캐스팅, 채널 관리 및 권한 제어를 지원합니다.
+## Description
+
+1988년 8월 핀란드 오울루 대학교의 **Jarkko Oikarinen**이 개발한 **IRC(Internet Relay Chat)**는 인터넷 역사상 가장 초기이자 막대한 영향을 끼친 실시간 텍스트 통신 프로토콜 중 하나로, Slack 및 Discord와 같은 현대 협업/메신저 플랫폼의 기초를 확립했습니다.
+
+**Project Goal**: **ft_irc**는 **RFC 1459** 표준 규격을 준수하여 **C++98** 표준으로 처음부터(Scratch) 직접 개발한 IRC 서버입니다. 본 프로젝트의 핵심 목표는 단일 스레드 환경에서 `poll()` I/O 멀티플렉싱을 활용하여 다중 클라이언트 동시 접속, 채널 관리 및 실시간 메시지 브로드캐스팅을 안전하게 처리하는 고성능 비동기 논블로킹(Non-blocking) 네트워크 서버를 구현하는 것입니다.
 
 ---
 
@@ -59,7 +62,7 @@ make re         # 클린 재빌드
 팀의 일관된 협업 흐름과 코드 품질 유지를 위해 상세 가이드를 마련했습니다.  
 작업 시작 전 아래 문서를 반드시 확인해 주세요!
 
-👉 **[상세 GitHub 협업 가이드 (docs/COLLABORATION_GUIDE.md)](docs/COLLABORATION_GUIDE.md)**  
+ **[상세 GitHub 협업 가이드 (docs/COLLABORATION_GUIDE.md)](docs/COLLABORATION_GUIDE.md)**  
 *(브랜치 전략, 커밋 룰, PR 템플릿, 코드 리뷰 가이드, 충돌 해결법 포함)*
 
 ### 핵심 룰 요약 (Quick Rules)
@@ -165,35 +168,43 @@ flowchart TD
 
 ---
 
-## ⚡ Supported Commands & Features
 
-### 1. Connection & Registration
-| Command | 설명 | 담당 |
+## 👥 Team & Roles
+
+| 팀원 | 담당 영역 | 핵심 역할 |
+| :--- | :--- | :--- |
+| **mAyoOopark** | **네트워크 계층** | 논블로킹 TCP 소켓 생명주기 관리, `poll()` I/O 멀티플렉싱, 연결 관리 및 송수신 버퍼 스트림 처리 |
+| **erdoslibrary** | **파서 계층** | RFC 1459 메시지 파싱, 명령어 디스패칭, 등록 시퀀스(`PASS`, `NICK`, `USER`) 검증 및 세션 제어(`QUIT`, `PING`, `PONG`) |
+| **mj-jo** | **채널 계층** | 채널 생명주기 및 멤버십 관리, 채널 모드(`+i`, `+t`, `+k`, `+o`, `+l`), 채널 명령어(`JOIN`, `PART`, `INVITE`, `KICK`, `TOPIC`, `PRIVMSG`) 구현 |
+
+---
+
+## Features
+
+### 1. Supported Commands
+
+| 카테고리 | 명령어 | 설명 |
 |---|---|---|
-| `PASS` | 서버 비밀번호 검증 | Parser |
-| `NICK` | 닉네임 설정 및 중복 검사 | Parser |
-| `USER` | 사용자 정보 등록 및 인증 완료 | Parser |
-| `PING` / `PONG` | 연결 활성 상태 확인 | Parser |
-| `QUIT` | 클라이언트 연결 종료 및 자원 정리 | Parser / Network |
+| **연결 및 인증** | `PASS` | 서버 비밀번호를 통한 연결 인증 |
+| | `NICK` | 클라이언트 닉네임 설정 및 변경 (고유성 검증) |
+| | `USER` | 사용자명 및 실명 등록으로 최종 등록 완료 |
+| | `PING` / `PONG` | 연결 생존 확인을 위한 하트비트 메커니즘 |
+| | `QUIT` | 정상 연결 종료 및 공유 채널에 퇴장 메시지 브로드캐스트 |
+| **채널 작업** | `JOIN` | 채널 생성 또는 입장 (비밀번호, 인원제한, 초대 상태 검증) |
+| | `PART` | 지정한 채널에서 퇴장 |
+| | `TOPIC` | 채널 주제(Topic) 조회 및 변경 |
+| | `MODE` | 채널 모드 및 오퍼레이터(운영자) 권한 설정/조회 |
+| | `KICK` | 채널에서 특정 사용자 강제 퇴장 (오퍼레이터 전용) |
+| | `INVITE` | 초대 전용 채널에 사용자 초대 (오퍼레이터 전용) |
+| **메시징** | `PRIVMSG` | 특정 사용자 1:1 메시지 전송 또는 채널 전체 브로드캐스트 |
 
-### 2. Channel Operations & Messaging
-| Command | 설명 | 담당 |
-|---|---|---|
-| `JOIN` | 채널 생성 또는 입장 (키/인원제한/초대전용 검증) | Channel |
-| `PART` | 채널 퇴장 | Channel |
-| `TOPIC` | 채널 주제 조회 및 변경 | Channel |
-| `MODE` | 채널 모드 변경 (`+/- i, t, k, o, l`) | Channel |
-| `KICK` | 채널에서 특정 유저 강제 퇴장 (오퍼레이터 전용) | Channel |
-| `INVITE` | 초대전용 채널에 유저 초대 (오퍼레이터 전용) | Channel |
-| `PRIVMSG` | 유저 1:1 메시지 전송 또는 채널 브로드캐스팅 | Channel / Parser |
+### 2. Supported Channel Modes
 
-### 3. Channel Modes
-- `+i` / `-i`: 초대 전용 채널 (Invite-only)
-- `+t` / `-t`: 오퍼레이터만 TOPIC 설정 가능
-- `+k` / `-k`: 채널 비밀번호(키) 설정 및 해제
-- `+o` / `-o`: 채널 오퍼레이터 권한 부여 및 회수
-- `+l` / `-l`: 채널 최대 참여 인원(User Limit) 제한 설정 및 해제
-
+- `+i` / `-i`: 초대 전용(Invite-only) 채널 설정 / 해제
+- `+t` / `-t`: 채널 운영자(Operator)만 `TOPIC`을 변경할 수 있도록 제한 / 해제
+- `+k` / `-k`: 채널 비밀번호(Key) 설정 / 해제
+- `+o` / `-o`: 채널 운영자(Operator) 권한 부여 / 박탈
+- `+l` / `-l`: 채널 최대 접속 인원수(Limit) 제한 / 해제
 ---
 
 ## 🧪 Testing
@@ -205,17 +216,6 @@ make test
 # 2. Irssi 클라이언트 호환성 통합 테스트
 make test_irssi
 ```
-
----
-
-
-## 👥 Team & Roles
-
-| 팀원 | 담당 영역 | 핵심 역할 |
-| :--- | :--- | :--- |
-| **jooyepar** | **네트워크 계층** | 논블로킹 TCP 소켓 생명주기 관리, `poll()` I/O 멀티플렉싱, 연결 관리 및 송수신 버퍼 스트림 처리 |
-| **borlee** | **파서 계층** | RFC 1459 메시지 파싱, 명령어 디스패칭, 등록 시퀀스(`PASS`, `NICK`, `USER`) 검증 및 세션 제어(`QUIT`, `PING`, `PONG`) |
-| **mjoh** | **채널 계층** | 채널 생명주기 및 멤버십 관리, 채널 모드(`+i`, `+t`, `+k`, `+o`, `+l`), 채널 명령어(`JOIN`, `PART`, `INVITE`, `KICK`, `TOPIC`, `PRIVMSG`) 구현 |
 
 ---
 
