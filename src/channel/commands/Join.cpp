@@ -171,7 +171,7 @@ void Join::execute(Server& server, Client& client, const Message& msg)
         {
             client.appendToOutBuffer(reply(Numeric::RPL_NAMREPLY, target, "= " + channelName + " :" + memberList));
         }
-        // 366 RPL_ENDOFNAMES(목록 전송 완료 신호)
+        // 목록 전송 완료 신호
         client.appendToOutBuffer(reply(Numeric::RPL_ENDOFNAMES, target, channelName + " :End of /NAMES list."));
     }
 }

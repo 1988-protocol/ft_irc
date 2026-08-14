@@ -10,6 +10,25 @@
 
 //RFC 1459 4.2.3.1
 
+namespace 
+{
+    void appendAppliedMode(std::string& appliedModes, std::string& lastSign, bool isAdding, char modeFlag)
+    {
+        std::string currentSign;
+        if (isAdding)
+            currentSign = "+";
+        else
+            currentSign = "-";
+
+        if (lastSign != currentSign)
+        {
+            appliedModes += currentSign;
+            lastSign = currentSign; // 현재 부호로 기록 갱신
+        }
+        appliedModes += modeFlag;
+    }
+}
+
 Mode::Mode() : ICommand() {}
 
 Mode::~Mode() {}
@@ -34,8 +53,16 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
+    // 명령 요청 유저가 채널 멤버인지 확인
+    if (!channel->isMember(&client)) 
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
+        return;
+    }
+
     // 인자가 채널명 하나만 들어온 경우: 단순 모드 상태 조회
-    if (params.size() == 1) {
+    if (params.size() == 1) 
+    {
         std::string modeStr = channel->getModeString();
         std::string modeParams = "";
 
@@ -46,9 +73,9 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         // +l 모드인 경우 파라미터에 유저 수 추가
         if (channel->getUserLimit() > 0)
         {
-            std::ostringstream oss;
-            oss << channel->getUserLimit();
-            modeParams += " " + oss.str();
+            std::ostringstream limitNumber;
+            limitNumber << channel->getUserLimit();
+            modeParams += " " + limitNumber.str();
         }
 
         if (modeStr.empty())
@@ -58,27 +85,33 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         return;
     }
 
-    // 명령 요청 유저가 채널 멤버인지 확인
-    if (!channel->isMember(&client)) {
-        client.appendToOutBuffer(reply(Numeric::ERR_NOTONCHANNEL, target, channelName + " :You're not on that channel"));
-        return;
-    }
-
     // 모드 변경 시도 시 방장 권한 확인
-    if (!channel->isOperator(&client)) {
+    if (!channel->isOperator(&client)) 
+    {
         client.appendToOutBuffer(reply(Numeric::ERR_CHANOPRIVSNEEDED, target, channelName + " :You're not channel operator"));
         return;
     }
 
-    std::string modeStr = params[1]; //+k, +i, +o 일 수도 있고 +itk 나 +i-t+o 일 수도 있음
-    if (modeStr.size() < 2 || (modeStr[0] != '+' && modeStr[0] != '-')) 
-        return;
+    std::string modeStr = params[1];
 
-    bool isAdding = (modeStr[0] == '+');
+    if (modeStr.size() < 2)
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
+        return;
+    }
+    
+    if (modeStr[0] != '+' && modeStr[0] != '-')
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_UNKNOWNMODE, target, std::string(1, modeStr[0]) + " :is unknown mode char to me"));
+        return;
+    }
+
+    bool isAdding = false;
     size_t paramIdx = 2; // 추가 인자가 위치할 인덱스
 
     std::string appliedModes = ""; // 실제 적용된 모드 기호 모음
     std::string appliedArg = ""; // 추가 인자 저장 변수
+    std::string lastSign = "";
 
     for (size_t i = 0; i < modeStr.size(); ++i)
     {
@@ -88,15 +121,11 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         if (modeFlag =='+')
         {
             isAdding = true;
-            if (appliedModes.empty() || appliedModes[appliedModes.size() - 1] != '+')
-                appliedModes += '+';
             continue;
         }
         if (modeFlag =='-')
         {
             isAdding = false;
-            if (appliedModes.empty() || appliedModes[appliedModes.size() - 1] != '-')
-                appliedModes += '-';
             continue;
         }
         // 모드 플래그별 분기 처리
@@ -104,12 +133,12 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         {
             case 'i':
                 channel->setInviteOnly(isAdding);
-                appliedModes += 'i';
+                appendAppliedMode(appliedModes, lastSign, isAdding, 'i');
                 break;
 
             case 't':
                 channel->setTopicOpOnly(isAdding);
-                appliedModes += 't';
+                appendAppliedMode(appliedModes, lastSign, isAdding, 't');
                 break;
 
             case 'k':
@@ -128,13 +157,13 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         continue;
                     }
                     channel->setKey(keyArg);
-                    appliedModes += 'k';
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'k');
                     appliedArg += " " + keyArg;
                 }
                 else
                 {
                     channel->removeKey();
-                    appliedModes += 'k';
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'k');
                 }
                 break;
 
@@ -154,13 +183,13 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         continue;
                     }
                     channel->setUserLimit(limit);
-                    appliedModes += 'l';
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'l');
                     appliedArg += " " + params[paramIdx++];
                 }
                 else
                 {
                     channel->removeUserLimit();
-                    appliedModes += 'l';
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'l');
                 }
                 break;
 
@@ -186,9 +215,11 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
                         continue;
                     }
 
-                    if (isAdding) channel->addOperator(targetClient);
-                    else channel->removeOperator(targetClient);
-                    appliedModes += 'o';
+                    if (isAdding)
+                        channel->addOperator(targetClient);
+                    else
+                        channel->removeOperator(targetClient);
+                    appendAppliedMode(appliedModes, lastSign, isAdding, 'o');
                     appliedArg += " " + targetNick;
                 }
                 break;
@@ -208,5 +239,9 @@ void Mode::execute(Server& server, Client& client, const Message& msg)
         {
             it->first->appendToOutBuffer(buildMessage(client, "MODE", channelName + " " + appliedModes + appliedArg, ""));
         }
+    }
+    else
+    {
+        client.appendToOutBuffer(reply(Numeric::ERR_NEEDMOREPARAMS, target, "MODE :Not enough parameters"));
     }
 }
